@@ -44,7 +44,7 @@ const menuGroups = [
         ),
 
         label: "Home",
-        route: "/",
+        route: "/admin",
       },
       {
         icon: (
@@ -234,12 +234,12 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
         <div className="flex items-center justify-between gap-2 px-6 py-5.5 lg:py-6.5">
           <Link className="-my-10 flex items-center justify-center" href="/">
             <Image
-              width={200}
-              height={60}
-              src={"/images/logo/hcsp_logo.png"}
+              width={240}
+              height={80}
+              src={"/images/logo/joeMedia.png"}
               alt="Logo"
               priority
-              className="pt-10"
+              className="pt-16"
             />
             {/* <h1 className="font-bold text-4xl text-white -ml-8">Albri</h1> */}
           </Link>
