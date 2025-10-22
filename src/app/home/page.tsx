@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import Footer from '@/components/Footer/footer'
 
 interface Article {
   id: string
@@ -63,7 +64,6 @@ export default function HomePage() {
     if (error) {
       console.error('❌ Error fetching articles:', error)
     } else {
-      // ✅ Normalisasi agar relasi aman (tidak null & tidak array)
       const normalizedData: Article[] = (data || []).map((item: any) => ({
         ...item,
         articles_author_id_fkey:
@@ -84,7 +84,26 @@ export default function HomePage() {
     router.refresh()
   }
 
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <p className="text-gray-500">Loading articles...</p>
+      </div>
+    )
+  }
+
+  if (articles.length === 0) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <p className="text-gray-500">No articles yet.</p>
+      </div>
+    )
+  }
+
+  const [latestArticle, ...otherArticles] = articles
+
   return (
+    <div>
     <div className="max-w-4xl mx-auto p-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
@@ -110,26 +129,47 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Articles list */}
-      {loading ? (
-        <p className="text-gray-500">Loading articles...</p>
-      ) : articles.length === 0 ? (
-        <p className="text-gray-500">No articles yet.</p>
-      ) : (
-        <div className="space-y-6">
-          {articles.map((article) => (
-            <div key={article.id} className="border rounded-xl p-4 shadow-sm">
-              {article.image_path && (
-                <img
-                  src={article.image_path}
-                  alt={article.title}
-                  className="rounded-lg mb-3"
-                />
-              )}
-              <h2 className="text-2xl font-semibold">{article.title}</h2>
-              <p className="text-gray-700 mt-2 line-clamp-3">{article.body}</p>
+      {/* Artikel terbaru (besar di atas) */}
+      <div className="border rounded-2xl shadow-lg overflow-hidden mb-8">
+        {latestArticle.image_path && (
+          <img
+            src={latestArticle.image_path}
+            alt={latestArticle.title}
+            className="w-full h-72 object-cover"
+          />
+        )}
+        <div className="p-6">
+          <h2 className="text-3xl font-bold mb-3">{latestArticle.title}</h2>
+          <p className="text-gray-700 line-clamp-4 mb-4">{latestArticle.body}</p>
+          <p className="text-sm text-gray-500">
+            By {latestArticle.articles_author_id_fkey?.full_name || 'Unknown Author'} •{' '}
+            {new Date(latestArticle.created_at).toLocaleDateString('id-ID', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            })}
+          </p>
+        </div>
+      </div>
 
-              <p className="text-sm text-gray-500 mt-3">
+      {/* Artikel lainnya */}
+      <div className="flex flex-col gap-6">
+        {otherArticles.map((article) => (
+          <div
+            key={article.id}
+            className="flex flex-col md:flex-row gap-4 border rounded-xl p-4 shadow-sm"
+          >
+            {article.image_path && (
+              <img
+                src={article.image_path}
+                alt={article.title}
+                className="w-full md:w-48 h-32 object-cover rounded-lg"
+              />
+            )}
+            <div className="flex-1">
+              <h3 className="text-xl font-semibold">{article.title}</h3>
+              <p className="text-gray-700 mt-2 line-clamp-2">{article.body}</p>
+              <p className="text-sm text-gray-500 mt-2">
                 By {article.articles_author_id_fkey?.full_name || 'Unknown Author'} •{' '}
                 {new Date(article.created_at).toLocaleDateString('id-ID', {
                   day: '2-digit',
@@ -138,9 +178,11 @@ export default function HomePage() {
                 })}
               </p>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
+    </div>
+    <Footer />
     </div>
   )
 }
