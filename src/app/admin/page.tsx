@@ -26,13 +26,14 @@ const AdminPage = () => {
 
   useEffect(() => {
     const checkAdmin = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser()
       if (!authUser) {
-        router.push('/login') // redirect kalau belum login
+        router.push('/login')
         return
       }
 
-      // ambil role dari profiles
       const { data: profile } = await supabase
         .from('profiles')
         .select('role, full_name')
@@ -40,7 +41,7 @@ const AdminPage = () => {
         .single()
 
       if (!profile || profile.role !== 'admin') {
-        router.push('/') // redirect kalau bukan admin
+        router.push('/')
         return
       }
 
@@ -69,8 +70,20 @@ const AdminPage = () => {
       `)
       .order('created_at', { ascending: false })
 
-    if (error) console.error('❌ Error fetching articles:', error)
-    else setArticles(data || [])
+    if (error) {
+      console.error('❌ Error fetching articles:', error)
+    } else {
+      // ✅ Normalize structure supaya TypeScript nggak error
+      const normalizedData: Article[] = (data || []).map((item: any) => ({
+        ...item,
+        articles_author_id_fkey:
+          item.articles_author_id_fkey && !Array.isArray(item.articles_author_id_fkey)
+            ? item.articles_author_id_fkey
+            : item.articles_author_id_fkey?.[0] || { full_name: null },
+      }))
+
+      setArticles(normalizedData)
+    }
 
     setLoading(false)
   }
@@ -79,7 +92,9 @@ const AdminPage = () => {
     <DefaultLayout>
       <div className="max-w-4xl mx-auto p-6">
         <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
-        <p className="mb-4 text-gray-600">Welcome, {userFullName} ({userRole})</p>
+        <p className="mb-4 text-gray-600">
+          Welcome, {userFullName} ({userRole})
+        </p>
 
         {loading ? (
           <p className="text-gray-500">Loading articles...</p>

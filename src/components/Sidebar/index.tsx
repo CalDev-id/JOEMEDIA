@@ -188,37 +188,6 @@ const menuGroups = [
     ],
   },
 ];
-const menuGroups2 = [
-  {
-    name: "COLLECTIONS",
-    menuItems: [
-      {
-        // icon: (
-        //   <svg
-        //     className="fill-current"
-        //     width="18"
-        //     height="18"
-        //     viewBox="0 0 24 24"
-        //     fill="none"
-        //     xmlns="http://www.w3.org/2000/svg"
-        //   >
-        //     <path
-        //       d="M3 10L12 3L21 10V20C21 20.55 20.55 21 20 21H15C14.45 21 14 20.55 14 20V16C14 15.45 13.55 15 13 15H11C10.45 15 10 15.45 10 16V20C10 20.55 9.55 21 9 21H4C3.45 21 3 20.55 3 20V10Z"
-        //       stroke="currentColor"
-        //       strokeWidth="2"
-        //       strokeLinecap="round"
-        //       strokeLinejoin="round"
-        //     />
-        //   </svg>
-        // ),
-
-        label: "AI Benefits in HR Tech",
-        route: "",
-      },
-    ],
-  },
-];
-
 const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
   const pathname = usePathname();
   const [pageName, setPageName] = useLocalStorage("selectedMenu", "dashboard");

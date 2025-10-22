@@ -4,21 +4,18 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 
-
 interface Article {
   id: string
   title: string
   body: string
-  image_path: string | null
+  image_path: string
   published: boolean
-  published_at: string | null
+  published_at?: string
   created_at: string
-  articles_author_id_fkey: {
-    full_name: string | null
-  } | null
+  articles_author_id_fkey: { full_name: string | null } // ← sudah fix
 }
 
-export default function ArticlesPage() {
+export default function AdminPage() {
   const router = useRouter()
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
@@ -36,15 +33,30 @@ export default function ArticlesPage() {
       const { data: { user: authUser } } = await supabase.auth.getUser()
       console.log('Auth UID:', authUser?.id)
 
-      if (authUser) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', authUser.id)
-          .single()
+      if (!authUser) {
+        router.push('/login')
+        return
+      }
 
-        console.log('Profile data:', profile)
-        setUserFullName(profile?.full_name ?? '')
+      // Ambil profil user
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('full_name, role')
+        .eq('id', authUser.id)
+        .single()
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError)
+        return
+      }
+
+      console.log('Profile data:', profile)
+      setUserFullName(profile?.full_name ?? '')
+
+      // Kalau bukan admin → redirect ke /home
+      if (profile.role !== 'admin') {
+        router.push('/home')
+        return
       }
     }
 
@@ -68,12 +80,18 @@ export default function ArticlesPage() {
           full_name
         )
       `)
-      .eq('published', true)
       .order('created_at', { ascending: false })
 
-
-    if (error) console.error('❌ Error fetching articles:', error)
-    else setArticles(data || [])
+    if (error) {
+      console.error('❌ Error fetching articles:', error)
+    } else {
+      setArticles(
+        (data || []).map((item: any) => ({
+          ...item,
+          articles_author_id_fkey: item.articles_author_id_fkey?.[0] || { full_name: null },
+        }))
+      )
+    }
 
     setLoading(false)
   }
@@ -81,6 +99,7 @@ export default function ArticlesPage() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     setUserFullName('')
+    router.push('/login')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -134,7 +153,7 @@ export default function ArticlesPage() {
       if (insertError) throw insertError
 
       alert('✅ Article created successfully!')
-      setFormData({ title: '', body: '', imageFile: null, published: false })
+      setFormData({ title: '', body: '', imageFile: null, published: true })
       fetchArticles()
     } catch (error: any) {
       console.error('❌ Error creating article:', error)
@@ -147,28 +166,28 @@ export default function ArticlesPage() {
   return (
     <div className="max-w-3xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Articles</h1>
-{userFullName ? (
-  <div className="flex items-center gap-4">
-    <span className="font-medium">{userFullName}</span>
-    <button
-      onClick={handleLogout}
-      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
-    >
-      Logout
-    </button>
-  </div>
-) : (
-  <button
-    onClick={() => router.push('/login')} // redirect ke halaman login
-    className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
-  >
-    Log in
-  </button>
-)}
-
+        <h1 className="text-3xl font-bold">Admin Panel</h1>
+        {userFullName ? (
+          <div className="flex items-center gap-4">
+            <span className="font-medium">{userFullName}</span>
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Logout
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => router.push('/login')}
+            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+          >
+            Log in
+          </button>
+        )}
       </div>
 
+      {/* 📰 FORM BUAT ARTIKEL */}
       <form
         onSubmit={handleSubmit}
         className="mb-10 border p-4 rounded-lg shadow-sm space-y-4 bg-gray-50"
@@ -212,16 +231,6 @@ export default function ArticlesPage() {
           />
         </div>
 
-        <div className="items-center gap-2 hidden">
-          <input
-  type="checkbox"
-  checked={formData.published}
-  hidden
-  readOnly
-/>
-
-        </div>
-
         <button
           type="submit"
           disabled={uploading}
@@ -231,6 +240,7 @@ export default function ArticlesPage() {
         </button>
       </form>
 
+      {/* 🧾 LIST ARTIKEL */}
       {loading ? (
         <p className="text-gray-500">Loading articles...</p>
       ) : articles.length === 0 ? (
@@ -250,8 +260,7 @@ export default function ArticlesPage() {
               <p className="text-gray-700 mt-2 line-clamp-3">{article.body}</p>
 
               <p className="text-sm text-gray-500 mt-3">
-                By {article.articles_author_id_fkey?.full_name || 'Unknown Author'}{' '}
-                •{' '}
+                By {article.articles_author_id_fkey?.full_name || 'Unknown Author'} •{' '}
                 {new Date(article.created_at).toLocaleDateString('id-ID', {
                   day: '2-digit',
                   month: 'short',
