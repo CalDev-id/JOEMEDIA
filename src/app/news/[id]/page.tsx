@@ -8,13 +8,12 @@ interface Article {
   id: string
   title: string
   body: string
-  image_path: string | null
+  image_path: string
   published: boolean
   created_at: string
-  articles_author_id_fkey: {
-    full_name: string | null
-  } | null
+  articles_author_id_fkey: { full_name: string | null }[] // ← ubah jadi array
 }
+
 
 export default function NewsDetailPage() {
   const router = useRouter()
