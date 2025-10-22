@@ -23,12 +23,17 @@ const AdminPage = () => {
   const [loading, setLoading] = useState(true)
   const [userRole, setUserRole] = useState<string | null>(null)
   const [userFullName, setUserFullName] = useState<string>('')
+  const [formData, setFormData] = useState({
+    title: '',
+    body: '',
+    imageFile: null as File | null,
+    published: true,
+  })
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     const checkAdmin = async () => {
-      const {
-        data: { user: authUser },
-      } = await supabase.auth.getUser()
+      const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) {
         router.push('/login')
         return
@@ -64,16 +69,13 @@ const AdminPage = () => {
         image_path,
         published,
         created_at,
-        articles_author_id_fkey (
-          full_name
-        )
+        articles_author_id_fkey(full_name)
       `)
       .order('created_at', { ascending: false })
 
     if (error) {
       console.error('❌ Error fetching articles:', error)
     } else {
-      // ✅ Normalize structure supaya TypeScript nggak error
       const normalizedData: Article[] = (data || []).map((item: any) => ({
         ...item,
         articles_author_id_fkey:
@@ -81,11 +83,65 @@ const AdminPage = () => {
             ? item.articles_author_id_fkey
             : item.articles_author_id_fkey?.[0] || { full_name: null },
       }))
-
       setArticles(normalizedData)
     }
 
     setLoading(false)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setUploading(true)
+
+    try {
+      let imagePath: string | null = null
+
+      if (formData.imageFile) {
+        const fileExt = formData.imageFile.name.split('.').pop()
+        const fileName = `${Date.now()}.${fileExt}`
+        const filePath = `articles/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('news-images')
+          .upload(filePath, formData.imageFile, {
+            contentType: formData.imageFile.type,
+            cacheControl: '3600',
+            upsert: false,
+          })
+
+        if (uploadError) throw uploadError
+
+        const { data: publicUrlData } = supabase.storage
+          .from('news-images')
+          .getPublicUrl(filePath)
+
+        imagePath = publicUrlData.publicUrl
+      }
+
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+
+      // pastikan kolom foreign key benar (biasanya 'author_id')
+      const { error: insertError } = await supabase.from('articles').insert([
+        {
+          title: formData.title,
+          body: formData.body,
+          image_path: imagePath,
+          published: formData.published,
+          author_id: authUser?.id, // foreign key ke profiles.id
+        },
+      ])
+
+      if (insertError) throw insertError
+
+      alert('✅ Article created successfully!')
+      setFormData({ title: '', body: '', imageFile: null, published: true })
+      fetchArticles()
+    } catch (error: any) {
+      console.error('❌ Error creating article:', error)
+      alert('Failed to create article.')
+    } finally {
+      setUploading(false)
+    }
   }
 
   return (
@@ -96,6 +152,56 @@ const AdminPage = () => {
           Welcome, {userFullName} ({userRole})
         </p>
 
+        {/* CREATE ARTICLE FORM */}
+        <form
+          onSubmit={handleSubmit}
+          className="mb-10 border p-5 rounded-lg shadow-sm bg-gray-50 space-y-4"
+        >
+          <h2 className="text-xl font-semibold">Create New Article</h2>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Title</label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="w-full border rounded p-2"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Body</label>
+            <textarea
+              value={formData.body}
+              onChange={(e) => setFormData({ ...formData, body: e.target.value })}
+              className="w-full border rounded p-2 h-28"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Image</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) =>
+                setFormData({ ...formData, imageFile: e.target.files?.[0] || null })
+              }
+              className="w-full"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={uploading}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+          >
+            {uploading ? 'Uploading...' : 'Create Article'}
+          </button>
+        </form>
+
+        {/* ARTICLE LIST */}
         {loading ? (
           <p className="text-gray-500">Loading articles...</p>
         ) : articles.length === 0 ? (
