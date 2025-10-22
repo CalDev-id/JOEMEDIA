@@ -11,13 +11,12 @@ interface Article {
   image_path: string
   published: boolean
   created_at: string
-  articles_author_id_fkey: { full_name: string | null }[] // ← ubah jadi array
+  articles_author_id_fkey: { full_name: string | null }[]
 }
-
 
 export default function NewsDetailPage() {
   const router = useRouter()
-  const params = useParams() // Get params from URL
+  const params = useParams()
   const { id } = params
   const [article, setArticle] = useState<Article | null>(null)
   const [loading, setLoading] = useState(true)
@@ -90,7 +89,7 @@ export default function NewsDetailPage() {
       <h1 className="text-4xl font-bold mb-4">{article.title}</h1>
 
       <p className="text-sm text-gray-500 mb-6">
-        By {article.articles_author_id_fkey?.full_name || 'Unknown Author'} •{' '}
+        By {article.articles_author_id_fkey?.[0]?.full_name || 'Unknown Author'} •{' '}
         {new Date(article.created_at).toLocaleDateString('id-ID', {
           day: '2-digit',
           month: 'long',
