@@ -104,85 +104,89 @@ export default function HomePage() {
 
   return (
     <div>
-    <div className="max-w-4xl mx-auto p-6">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">News Articles</h1>
+      <div className="max-w-4xl mx-auto p-6">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">News Articles</h1>
 
-        {userFullName ? (
-          <div className="flex items-center gap-4">
-            <span className="font-medium">{userFullName}</span>
+          {userFullName ? (
+            <div className="flex items-center gap-4">
+              <span className="font-medium">{userFullName}</span>
+              <button
+                onClick={handleLogout}
+                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
             <button
-              onClick={handleLogout}
-              className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+              onClick={() => router.push('/login')}
+              className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
             >
-              Logout
+              Log in
             </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => router.push('/login')}
-            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
-          >
-            Log in
-          </button>
-        )}
-      </div>
+          )}
+        </div>
 
-      {/* Artikel terbaru (besar di atas) */}
-      <div className="border rounded-2xl shadow-lg overflow-hidden mb-8">
-        {latestArticle.image_path && (
-          <img
-            src={latestArticle.image_path}
-            alt={latestArticle.title}
-            className="w-full h-72 object-cover"
-          />
-        )}
-        <div className="p-6">
-          <h2 className="text-3xl font-bold mb-3">{latestArticle.title}</h2>
-          <p className="text-gray-700 line-clamp-4 mb-4">{latestArticle.body}</p>
-          <p className="text-sm text-gray-500">
-            By {latestArticle.articles_author_id_fkey?.full_name || 'Unknown Author'} •{' '}
-            {new Date(latestArticle.created_at).toLocaleDateString('id-ID', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-            })}
-          </p>
+        {/* Artikel terbaru (besar di atas) */}
+        <div
+          className="border rounded-2xl shadow-lg overflow-hidden mb-8 cursor-pointer hover:shadow-2xl transition"
+          onClick={() => router.push(`/news/${latestArticle.id}`)}
+        >
+          {latestArticle.image_path && (
+            <img
+              src={latestArticle.image_path}
+              alt={latestArticle.title}
+              className="w-full h-72 object-cover"
+            />
+          )}
+          <div className="p-6">
+            <h2 className="text-3xl font-bold mb-3">{latestArticle.title}</h2>
+            <p className="text-gray-700 line-clamp-4 mb-4">{latestArticle.body}</p>
+            <p className="text-sm text-gray-500">
+              By {latestArticle.articles_author_id_fkey?.full_name || 'Unknown Author'} •{' '}
+              {new Date(latestArticle.created_at).toLocaleDateString('id-ID', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+              })}
+            </p>
+          </div>
+        </div>
+
+        {/* Artikel lainnya */}
+        <div className="flex flex-col gap-6">
+          {otherArticles.map((article) => (
+            <div
+              key={article.id}
+              onClick={() => router.push(`/news/${article.id}`)}
+              className="flex flex-col md:flex-row gap-4 border rounded-xl p-4 shadow-sm cursor-pointer hover:shadow-md transition"
+            >
+              {article.image_path && (
+                <img
+                  src={article.image_path}
+                  alt={article.title}
+                  className="w-full md:w-48 h-32 object-cover rounded-lg"
+                />
+              )}
+              <div className="flex-1">
+                <h3 className="text-xl font-semibold">{article.title}</h3>
+                <p className="text-gray-700 mt-2 line-clamp-2">{article.body}</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  By {article.articles_author_id_fkey?.full_name || 'Unknown Author'} •{' '}
+                  {new Date(article.created_at).toLocaleDateString('id-ID', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-
-      {/* Artikel lainnya */}
-      <div className="flex flex-col gap-6">
-        {otherArticles.map((article) => (
-          <div
-            key={article.id}
-            className="flex flex-col md:flex-row gap-4 border rounded-xl p-4 shadow-sm"
-          >
-            {article.image_path && (
-              <img
-                src={article.image_path}
-                alt={article.title}
-                className="w-full md:w-48 h-32 object-cover rounded-lg"
-              />
-            )}
-            <div className="flex-1">
-              <h3 className="text-xl font-semibold">{article.title}</h3>
-              <p className="text-gray-700 mt-2 line-clamp-2">{article.body}</p>
-              <p className="text-sm text-gray-500 mt-2">
-                By {article.articles_author_id_fkey?.full_name || 'Unknown Author'} •{' '}
-                {new Date(article.created_at).toLocaleDateString('id-ID', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric',
-                })}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-    <Footer />
+      <Footer />
     </div>
   )
 }
