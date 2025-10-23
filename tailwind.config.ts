@@ -323,6 +323,10 @@ const config: Config = {
           "0%, 100%": { transform: "translateY(100%)" },
           "50%": { transform: "translateY(0)" },
         },
+        marquee: {
+          "0%": { transform: "translateX(0%)" },
+          "100%": { transform: "translateX(-100%)" },
+        },
       },
       animation: {
         linspin: "linspin 1568.2353ms linear infinite",
@@ -341,6 +345,7 @@ const config: Config = {
         line1: "line 10s infinite linear",
         line2: "line-revert 8s infinite linear",
         line3: "line 7s infinite linear",
+        marquee: "marquee 20s linear infinite",
       },
     },
   },
