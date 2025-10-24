@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Footer from "@/components/Footer/footer";
 import Navbar from "@/components/Navbar/page";
+import Loader from "@/components/common/Loader";
 
 interface Article {
   id: string;
@@ -90,9 +91,7 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-4xl p-6">
-        <p className="text-gray-500">Loading articles...</p>
-      </div>
+      <Loader />
     );
   }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import Loader from '@/components/common/Loader'
 
 interface Article {
   id: string
@@ -55,9 +56,7 @@ export default function NewsDetailPage() {
 
   if (loading) {
     return (
-      <div className="max-w-3xl mx-auto p-6 text-gray-500">
-        Loading article...
-      </div>
+      <Loader />
     )
   }
 

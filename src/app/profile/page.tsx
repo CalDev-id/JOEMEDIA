@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import DefaultLayout from '@/components/Layouts/DefaultLayout'
+import Loader from '@/components/common/Loader'
+import Navbar from '@/components/Navbar/page'
 
 interface Profile {
   id: string
@@ -185,11 +187,13 @@ export default function ProfilePage() {
   }
 
   if (loading)
-    return <p className="text-gray-500 p-6">Loading profile...</p>
+    return <Loader />
 
   const ProfileContent = (
-    <div className="mx-auto max-w-242.5 h-screen">
-      <div className="overflow-hidden rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+    <div className="h-screen">
+      <Navbar active="profile" />
+      <div className='max-w-242.5 mx-auto flex justify-center items-center pt-20'>
+        <div className="overflow-hidden rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
         {/* Cover Section */}
         <div className="relative z-20 h-35 md:h-65">
           <Image
@@ -267,6 +271,7 @@ export default function ProfilePage() {
             </button>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Modal Edit */}
