@@ -100,7 +100,10 @@ export default function NewsDetailPage() {
       <div className="prose max-w-none text-gray-800 leading-relaxed">
         {article.body.split('\n').map((paragraph, index) => (
           <p key={index} className="mb-4">
-            {paragraph}
+                                <div
+  className=""
+  dangerouslySetInnerHTML={{ __html: paragraph }}
+/>
           </p>
         ))}
       </div>

@@ -133,6 +133,10 @@ export default function HomePage() {
                 </h2>
                 <p className="mb-4 line-clamp-4 text-sm hidden text-gray-700 md:text-base">
                   {latestArticle.body}
+                                                  <div
+  className=""
+  dangerouslySetInnerHTML={{ __html: latestArticle.body }}
+/>
                 </p>
                 <p className="text-xs text-gray-500 md:text-sm">
                   By{" "}
@@ -174,7 +178,10 @@ export default function HomePage() {
                       {article.title}
                     </h3>
                     <p className="mt-2 line-clamp-3 text-sm text-gray-700">
-                      {article.body}
+                                                      <div
+  className=""
+  dangerouslySetInnerHTML={{ __html: article.body }}
+/>
                     </p>
                     <p className="mt-3 text-xs text-gray-500">
                       By{" "}
@@ -215,7 +222,10 @@ export default function HomePage() {
                       {article.title}
                     </h3>
                     <p className="mt-2 line-clamp-2 text-sm text-gray-700 md:text-base">
-                      {article.body}
+                                                      <div
+  className=""
+  dangerouslySetInnerHTML={{ __html: article.body }}
+/>
                     </p>
                     <p className="mt-2 text-xs text-gray-500 md:text-sm">
                       By{" "}
@@ -269,7 +279,10 @@ export default function HomePage() {
                     {article.title}
                   </h3>
                   <p className="mt-2 line-clamp-3 text-sm text-gray-700">
-                    {article.body}
+                                <div
+  className=""
+  dangerouslySetInnerHTML={{ __html: article.body }}
+/>
                   </p>
                   <p className="mt-3 text-xs text-gray-500">
                     By{" "}

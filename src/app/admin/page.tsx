@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import DefaultLayout from '@/components/Layouts/DefaultLayout'
 import { supabase } from '@/lib/supabaseClient'
+import TextEditor from '@/components/Editor/TextEditor'
 
 interface Article {
   id: string
@@ -172,12 +173,53 @@ const AdminPage = () => {
 
           <div>
             <label className="block text-sm font-medium mb-1">Body</label>
-            <textarea
-              value={formData.body}
-              onChange={(e) => setFormData({ ...formData, body: e.target.value })}
-              className="w-full border rounded p-2 h-28"
-              required
-            />
+
+<form
+  onSubmit={handleSubmit}
+  className="mb-10 border p-5 rounded-lg shadow-sm bg-gray-50 space-y-4"
+>
+  <h2 className="text-xl font-semibold">Create New Article</h2>
+
+  <div>
+    <label className="block text-sm font-medium mb-1">Title</label>
+    <input
+      type="text"
+      value={formData.title}
+      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+      className="w-full border rounded p-2"
+      required
+    />
+  </div>
+
+  <div>
+    <label className="block text-sm font-medium mb-1">Content</label>
+    <TextEditor
+      value={formData.body}
+      onChange={(value) => setFormData({ ...formData, body: value })}
+      placeholder="Tulis artikelmu di sini..."
+    />
+  </div>
+
+  <div>
+    <label className="block text-sm font-medium mb-1">Cover Image</label>
+    <input
+      type="file"
+      accept="image/*"
+      onChange={(e) =>
+        setFormData({ ...formData, imageFile: e.target.files?.[0] || null })
+      }
+      className="w-full"
+    />
+  </div>
+
+  <button
+    type="submit"
+    disabled={uploading}
+    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+  >
+    {uploading ? 'Uploading...' : 'Create Article'}
+  </button>
+</form>
           </div>
 
           <div>
@@ -218,7 +260,11 @@ const AdminPage = () => {
                   />
                 )}
                 <h2 className="text-2xl font-semibold">{article.title}</h2>
-                <p className="text-gray-700 mt-2 line-clamp-3">{article.body}</p>
+                                <div
+  className="text-gray-700 mt-2 prose max-w-none line-clamp-3"
+  dangerouslySetInnerHTML={{ __html: article.body }}
+/>
+
                 <p className="text-sm text-gray-500 mt-3">
                   By {article.articles_author_id_fkey?.full_name || 'Unknown Author'} •{' '}
                   {new Date(article.created_at).toLocaleDateString('id-ID', {
