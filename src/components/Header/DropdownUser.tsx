@@ -10,7 +10,7 @@ import { supabase } from "@/lib/supabaseClient";
 interface UserProfile {
   full_name: string;
   role: string;
-  avatar_url?: string;
+  avatar_url?: string | null;
 }
 
 const DropdownUser = () => {
@@ -18,17 +18,19 @@ const DropdownUser = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const router = useRouter();
 
-  // Ambil data profile user saat komponen mount
   useEffect(() => {
     const fetchProfile = async () => {
-      const user = supabase.auth.getUser();
-      const { data: { user: currentUser } } = await user;
-      if (currentUser) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
         const { data, error } = await supabase
           .from("profiles")
           .select("full_name, role, avatar_url")
-          .eq("id", currentUser.id)
+          .eq("id", user.id)
           .single();
+
         if (error) console.error("Error fetching profile:", error.message);
         else setProfile(data);
       }
@@ -36,12 +38,18 @@ const DropdownUser = () => {
     fetchProfile();
   }, []);
 
-  // Logout function
+  // ✅ Logout
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) console.error("Logout error:", error.message);
     else router.push("/login");
   };
+
+  // ✅ Gunakan avatar user dari Supabase Storage
+  const avatarSrc =
+    profile?.avatar_url && profile.avatar_url.trim() !== ""
+      ? profile.avatar_url
+      : "/images/logo/user.png"; // fallback image
 
   return (
     <ClickOutside onClick={() => setDropdownOpen(false)} className="relative">
@@ -49,6 +57,7 @@ const DropdownUser = () => {
         onClick={() => setDropdownOpen(!dropdownOpen)}
         className="flex items-center gap-4"
       >
+        {/* Nama dan Role */}
         <span className="hidden text-right lg:block">
           <span className="block text-sm font-medium text-black dark:text-white">
             {profile?.full_name || "User"}
@@ -56,16 +65,18 @@ const DropdownUser = () => {
           <span className="block text-xs">{profile?.role || "Role"}</span>
         </span>
 
-        <span className="h-12 w-12 rounded-full">
+        {/* ✅ Avatar dinamis */}
+        <span className="h-12 w-12 rounded-full overflow-hidden">
           <Image
+            src={avatarSrc}
+            alt="User avatar"
             width={48}
             height={48}
-            src={ "/images/user/user-01.png"}
-            alt="User"
-            style={{ width: "auto", height: "auto" }}
+            className="object-cover rounded-full"
           />
         </span>
 
+        {/* Panah dropdown */}
         <svg
           className="hidden fill-current sm:block"
           width="12"
@@ -83,6 +94,7 @@ const DropdownUser = () => {
         </svg>
       </button>
 
+      {/* Dropdown menu */}
       {dropdownOpen && (
         <div className="absolute right-0 mt-4 flex w-62.5 flex-col rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
           <ul className="flex flex-col gap-5 border-b border-stroke px-6 py-7.5 dark:border-strokedark">

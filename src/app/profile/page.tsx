@@ -59,42 +59,128 @@ export default function ProfilePage() {
   }, [router])
 
   const handleSave = async () => {
-    if (!profile) return
-
-    let avatarUrl = profile.avatar_url
-    if (newAvatar) {
-      const fileExt = newAvatar.name.split('.').pop()
-      const fileName = `${profile.id}.${fileExt}`
-      const { data, error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, newAvatar, { upsert: true })
-
-      if (uploadError) {
-        console.error('❌ Upload error:', uploadError)
-      } else {
-        const { data: publicUrlData } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(data?.path ?? '')
-
-        avatarUrl = publicUrlData?.publicUrl ?? null
-      }
+    if (!profile) {
+      console.warn('⚠️ Profile belum siap')
+      return
     }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        full_name: newFullName,
-        avatar_url: avatarUrl,
-      })
-      .eq('id', profile.id)
+    console.log('🧩 Memulai update profil...')
+    console.log('Nama baru:', newFullName)
+    console.log('Avatar file:', newAvatar)
 
-    if (error) {
-      alert('❌ Gagal update profil!')
-      console.error(error)
-    } else {
+    let avatarUrl = profile.avatar_url
+
+    try {
+      if (newAvatar) {
+        const fileExt = newAvatar.name.split('.').pop()
+        const fileName = `${profile.id}-${Date.now()}.${fileExt}`
+        const filePath = `avatars/${fileName}`
+
+        console.log('📤 Akan upload ke bucket: news-images →', filePath)
+
+        const { error: uploadError } = await supabase.storage
+          .from('news-images')
+          .upload(filePath, newAvatar, {
+            cacheControl: '3600',
+            upsert: true,
+            contentType: newAvatar.type,
+          })
+
+        if (uploadError) {
+          console.error('❌ Upload error:', uploadError.message)
+          alert('Gagal mengunggah foto profil!')
+          return
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('news-images')
+          .getPublicUrl(filePath)
+
+        avatarUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`
+      } else {
+        console.log('⚠️ Tidak ada avatar baru, hanya update nama.')
+      }
+
+      console.log('🟢 Update profil di database...')
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: newFullName,
+          avatar_url: avatarUrl,
+        })
+        .eq('id', profile.id)
+
+      if (updateError) {
+        console.error('❌ DB update error:', updateError.message)
+        alert('Gagal memperbarui profil di database!')
+        return
+      }
+
       alert('✅ Profil berhasil diperbarui!')
       setProfile({ ...profile, full_name: newFullName, avatar_url: avatarUrl })
       setIsModalOpen(false)
+    } catch (err) {
+      console.error('❌ Error umum saat update profil:', err)
+      alert('Terjadi kesalahan saat memperbarui profil.')
+    }
+  }
+
+  // ✅ upload otomatis saat file dipilih
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null
+    console.log('📸 File dipilih:', file)
+    if (!file) return
+    setNewAvatar(file)
+
+    if (!profile) {
+      alert('Profil belum siap.')
+      return
+    }
+
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${profile.id}-${Date.now()}.${fileExt}`
+      const filePath = `avatars/${fileName}`
+
+      console.log('📤 Upload ke bucket: news-images →', filePath)
+
+      const { error: uploadError } = await supabase.storage
+        .from('news-images')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: file.type,
+        })
+
+      if (uploadError) {
+        console.error('❌ Upload error:', uploadError)
+        alert('Gagal mengunggah foto profil!')
+        return
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('news-images')
+        .getPublicUrl(filePath)
+
+      const avatarUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`
+      console.log('✅ URL publik:', avatarUrl)
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', profile.id)
+
+      if (updateError) {
+        console.error('❌ DB update error:', updateError)
+        alert('Gagal memperbarui profil di database!')
+        return
+      }
+
+      setProfile({ ...profile, avatar_url: avatarUrl })
+      alert('✅ Foto profil berhasil diperbarui!')
+    } catch (err) {
+      console.error('❌ Error umum:', err)
+      alert('Terjadi kesalahan saat upload foto.')
     }
   }
 
@@ -120,6 +206,7 @@ export default function ProfilePage() {
           <div className="relative z-30 mx-auto -mt-22 h-30 w-full max-w-30 rounded-full bg-white/20 p-1 backdrop-blur sm:h-44 sm:max-w-44 sm:p-3">
             <div className="relative drop-shadow-2">
               <Image
+                key={profile?.avatar_url}
                 src={profile?.avatar_url || '/images/logo/user.png'}
                 width={160}
                 height={160}
@@ -152,7 +239,8 @@ export default function ProfilePage() {
                   type="file"
                   id="profile"
                   className="sr-only"
-                  onChange={(e) => setNewAvatar(e.target.files?.[0] ?? null)}
+                  accept="image/*"
+                  onChange={handleAvatarChange}
                 />
               </label>
             </div>
@@ -217,7 +305,6 @@ export default function ProfilePage() {
     </div>
   )
 
-  // ✅ Properly return JSX with top-level element
   return (
     <>
       {profile?.role === 'admin' ? (
