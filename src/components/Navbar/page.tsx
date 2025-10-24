@@ -57,7 +57,7 @@ const Navbar: FC<NavbarProps> = ({ active }) => {
   // Fungsi logout
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
-    if (!error) router.push("/login");
+    if (!error) router.push("/");
   };
 
   return (
