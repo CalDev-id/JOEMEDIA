@@ -15,6 +15,8 @@ export default function AdminArticles() {
   const [showModal, setShowModal] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const [selectedArticle, setSelectedArticle] = useState<any>(null)
+  const [userChecked, setUserChecked] = useState(false) // ✅ tambahkan state ini
+  const [user, setUser] = useState<any>(null)
   const router = useRouter()
 
   const itemsPerPage = 10
@@ -26,9 +28,35 @@ export default function AdminArticles() {
     published: true,
   })
 
-  // Load data
+  // ✅ Proteksi halaman (cek user login + role admin, tanpa flicker)
   useEffect(() => {
-    fetchArticles()
+    const checkUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        router.replace('/login')
+        return
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (profile?.role !== 'admin') {
+        router.replace('/')
+        return
+      }
+
+      setUser(user)
+      setUserChecked(true) // ✅ hanya render setelah lolos verifikasi
+      fetchArticles()
+    }
+
+    checkUser()
   }, [search])
 
   const fetchArticles = async () => {
@@ -96,7 +124,6 @@ export default function AdminArticles() {
     fetchArticles()
   }
 
-  // Pagination
   const totalPages = Math.ceil(articles.length / itemsPerPage)
   const paginatedArticles = articles.slice(
     (currentPage - 1) * itemsPerPage,
@@ -111,6 +138,9 @@ export default function AdminArticles() {
       day: 'numeric',
     })
   }
+
+  // 🚫 Jangan render apapun sampai verifikasi user selesai
+  if (!userChecked) return null
 
   return (
     <DefaultLayout>
@@ -157,11 +187,21 @@ export default function AdminArticles() {
           <table className="w-full table-auto">
             <thead>
               <tr className="bg-gray-2 dark:bg-meta-4">
-                <th className="py-4 px-4 text-left text-sm font-medium text-black dark:text-white pl-10">No</th>
-                <th className="py-4 px-4 text-left text-sm font-medium text-black dark:text-white">Judul</th>
-                <th className="py-4 px-4 text-left text-sm font-medium text-black dark:text-white">Penulis</th>
-                <th className="py-4 px-4 text-left text-sm font-medium text-black dark:text-white">Tanggal</th>
-                <th className="py-4 px-4 text-center text-sm font-medium text-black dark:text-white">Actions</th>
+                <th className="py-4 px-4 text-left text-sm font-medium text-black dark:text-white pl-10">
+                  No
+                </th>
+                <th className="py-4 px-4 text-left text-sm font-medium text-black dark:text-white">
+                  Judul
+                </th>
+                <th className="py-4 px-4 text-left text-sm font-medium text-black dark:text-white">
+                  Penulis
+                </th>
+                <th className="py-4 px-4 text-left text-sm font-medium text-black dark:text-white">
+                  Tanggal
+                </th>
+                <th className="py-4 px-4 text-center text-sm font-medium text-black dark:text-white">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -188,17 +228,12 @@ export default function AdminArticles() {
                     </td>
                     <td className="py-4 px-4 text-center">
                       <div className="flex justify-center gap-3">
-                        {/* Tombol Lihat */}
                         <button onClick={() => router.push(`/news/${article.id}`)}>
                           <FaEye className="text-blue-500 hover:text-blue-700 cursor-pointer" />
                         </button>
-
-                        {/* Tombol Edit */}
                         <button onClick={() => handleOpenEdit(article)}>
                           <FaEdit className="text-yellow-500 hover:text-yellow-700 cursor-pointer" />
                         </button>
-
-                        {/* Tombol Hapus */}
                         <button onClick={() => handleDelete(article.id)}>
                           <FaTrash className="text-red-500 hover:text-red-700 cursor-pointer" />
                         </button>

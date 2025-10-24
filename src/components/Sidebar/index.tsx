@@ -210,7 +210,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
               priority
               className="pt-16"
             />
-            {/* <h1 className="font-bold text-4xl text-white -ml-8">Albri</h1> */}
           </Link>
 
           <button
