@@ -1,285 +1,327 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { FaEdit, FaTrash, FaPlus, FaTimes, FaEye } from 'react-icons/fa'
 import DefaultLayout from '@/components/Layouts/DefaultLayout'
 import { supabase } from '@/lib/supabaseClient'
 import TextEditor from '@/components/Editor/TextEditor'
 
-interface Article {
-  id: string
-  title: string
-  body: string
-  image_path: string | null
-  published: boolean
-  created_at: string
-  articles_author_id_fkey: {
-    full_name: string | null
-  } | null
-}
-
-const AdminPage = () => {
-  const router = useRouter()
-  const [articles, setArticles] = useState<Article[]>([])
+export default function AdminArticles() {
+  const [articles, setArticles] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [userRole, setUserRole] = useState<string | null>(null)
-  const [userFullName, setUserFullName] = useState<string>('')
-  const [formData, setFormData] = useState({
+  const [search, setSearch] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [showModal, setShowModal] = useState(false)
+  const [editMode, setEditMode] = useState(false)
+  const [selectedArticle, setSelectedArticle] = useState<any>(null)
+  const router = useRouter()
+
+  const itemsPerPage = 10
+
+  const [form, setForm] = useState({
     title: '',
     body: '',
-    imageFile: null as File | null,
+    image_path: '',
     published: true,
   })
-  const [uploading, setUploading] = useState(false)
 
+  // Load data
   useEffect(() => {
-    const checkAdmin = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (!authUser) {
-        router.push('/login')
-        return
-      }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role, full_name')
-        .eq('id', authUser.id)
-        .single()
-
-      if (!profile || profile.role !== 'admin') {
-        router.push('/')
-        return
-      }
-
-      setUserRole(profile.role)
-      setUserFullName(profile.full_name ?? '')
-      fetchArticles()
-    }
-
-    checkAdmin()
-  }, [router])
+    fetchArticles()
+  }, [search])
 
   const fetchArticles = async () => {
     setLoading(true)
-    const { data, error } = await supabase
+    let query = supabase
       .from('articles')
-      .select(`
-        id,
-        title,
-        body,
-        image_path,
-        published,
-        created_at,
-        articles_author_id_fkey(full_name)
-      `)
+      .select('*, profiles(full_name)')
       .order('created_at', { ascending: false })
 
-    if (error) {
-      console.error('❌ Error fetching articles:', error)
-    } else {
-      const normalizedData: Article[] = (data || []).map((item: any) => ({
-        ...item,
-        articles_author_id_fkey:
-          item.articles_author_id_fkey && !Array.isArray(item.articles_author_id_fkey)
-            ? item.articles_author_id_fkey
-            : item.articles_author_id_fkey?.[0] || { full_name: null },
-      }))
-      setArticles(normalizedData)
-    }
+    if (search) query = query.ilike('title', `%${search}%`)
 
+    const { data, error } = await query
+    if (!error && data) setArticles(data)
     setLoading(false)
+  }
+
+  const handleOpenCreate = () => {
+    setForm({ title: '', body: '', image_path: '', published: true })
+    setEditMode(false)
+    setShowModal(true)
+  }
+
+  const handleOpenEdit = (article: any) => {
+    setForm({
+      title: article.title,
+      body: article.body,
+      image_path: article.image_path,
+      published: true,
+    })
+    setSelectedArticle(article)
+    setEditMode(true)
+    setShowModal(true)
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const { data, error } = await supabase.storage
+      .from('article-images')
+      .upload(`covers/${Date.now()}_${file.name}`, file)
+
+    if (!error && data) {
+      const { data: publicUrl } = supabase.storage
+        .from('article-images')
+        .getPublicUrl(data.path)
+      setForm((prev) => ({ ...prev, image_path: publicUrl.publicUrl }))
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setUploading(true)
-
-    try {
-      let imagePath: string | null = null
-
-      if (formData.imageFile) {
-        const fileExt = formData.imageFile.name.split('.').pop()
-        const fileName = `${Date.now()}.${fileExt}`
-        const filePath = `articles/${fileName}`
-
-        const { error: uploadError } = await supabase.storage
-          .from('news-images')
-          .upload(filePath, formData.imageFile, {
-            contentType: formData.imageFile.type,
-            cacheControl: '3600',
-            upsert: false,
-          })
-
-        if (uploadError) throw uploadError
-
-        const { data: publicUrlData } = supabase.storage
-          .from('news-images')
-          .getPublicUrl(filePath)
-
-        imagePath = publicUrlData.publicUrl
-      }
-
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-
-      // pastikan kolom foreign key benar (biasanya 'author_id')
-      const { error: insertError } = await supabase.from('articles').insert([
-        {
-          title: formData.title,
-          body: formData.body,
-          image_path: imagePath,
-          published: formData.published,
-          author_id: authUser?.id, // foreign key ke profiles.id
-        },
-      ])
-
-      if (insertError) throw insertError
-
-      alert('✅ Article created successfully!')
-      setFormData({ title: '', body: '', imageFile: null, published: true })
-      fetchArticles()
-    } catch (error: any) {
-      console.error('❌ Error creating article:', error)
-      alert('Failed to create article.')
-    } finally {
-      setUploading(false)
+    if (editMode && selectedArticle) {
+      await supabase.from('articles').update(form).eq('id', selectedArticle.id)
+    } else {
+      await supabase.from('articles').insert([form])
     }
+    setShowModal(false)
+    fetchArticles()
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Yakin ingin menghapus artikel ini?')) return
+    await supabase.from('articles').delete().eq('id', id)
+    fetchArticles()
+  }
+
+  // Pagination
+  const totalPages = Math.ceil(articles.length / itemsPerPage)
+  const paginatedArticles = articles.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('id-ID', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
   }
 
   return (
     <DefaultLayout>
-      <div className="max-w-4xl mx-auto p-6">
-        <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
-        <p className="mb-4 text-gray-600">
-          Welcome, {userFullName} ({userRole})
-        </p>
+      <div className="col-span-12 rounded-sm border border-stroke bg-white py-6 shadow-default dark:border-strokedark dark:bg-boxdark">
+        {/* Header */}
+        <div className="flex justify-between px-7.5 mb-6">
+          <h4 className="text-xl font-semibold text-black dark:text-white">Artikel</h4>
+          <button
+            onClick={handleOpenCreate}
+            className="bg-primary text-white px-4 py-2 rounded hover:bg-opacity-90 flex items-center gap-2"
+          >
+            <FaPlus size={14} />
+            Tambah Artikel
+          </button>
+        </div>
 
-        {/* CREATE ARTICLE FORM */}
-        <form
-          onSubmit={handleSubmit}
-          className="mb-10 border p-5 rounded-lg shadow-sm bg-gray-50 space-y-4"
-        >
-          <h2 className="text-xl font-semibold">Create New Article</h2>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Title</label>
+        {/* Search */}
+        <div className="px-7.5 mb-6">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              fetchArticles()
+            }}
+            className="flex gap-2"
+          >
             <input
               type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full border rounded p-2"
-              required
+              placeholder="Cari berdasarkan judul..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="px-4 py-2 border rounded flex-1 dark:bg-gray-800 dark:text-white dark:border-gray-600"
             />
-          </div>
+            <button
+              type="submit"
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            >
+              Cari
+            </button>
+          </form>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Body</label>
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full table-auto">
+            <thead>
+              <tr className="bg-gray-2 dark:bg-meta-4">
+                <th className="py-4 px-4 text-left text-sm font-medium text-black dark:text-white pl-10">No</th>
+                <th className="py-4 px-4 text-left text-sm font-medium text-black dark:text-white">Judul</th>
+                <th className="py-4 px-4 text-left text-sm font-medium text-black dark:text-white">Penulis</th>
+                <th className="py-4 px-4 text-left text-sm font-medium text-black dark:text-white">Tanggal</th>
+                <th className="py-4 px-4 text-center text-sm font-medium text-black dark:text-white">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-6 text-gray-500">
+                    Memuat data...
+                  </td>
+                </tr>
+              ) : paginatedArticles.length > 0 ? (
+                paginatedArticles.map((article, index) => (
+                  <tr key={article.id} className="border-b border-stroke dark:border-strokedark">
+                    <td className="py-4 px-4 pl-10 text-sm text-black dark:text-white">
+                      {(currentPage - 1) * itemsPerPage + index + 1}
+                    </td>
+                    <td className="py-4 px-4 text-sm text-black dark:text-white">
+                      {article.title}
+                    </td>
+                    <td className="py-4 px-4 text-sm text-black dark:text-white">
+                      {article.profiles?.full_name || '-'}
+                    </td>
+                    <td className="py-4 px-4 text-sm text-black dark:text-white">
+                      {formatDate(article.created_at)}
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <div className="flex justify-center gap-3">
+                        {/* Tombol Lihat */}
+                        <button onClick={() => router.push(`/news/${article.id}`)}>
+                          <FaEye className="text-blue-500 hover:text-blue-700 cursor-pointer" />
+                        </button>
 
-<form
-  onSubmit={handleSubmit}
-  className="mb-10 border p-5 rounded-lg shadow-sm bg-gray-50 space-y-4"
->
-  <h2 className="text-xl font-semibold">Create New Article</h2>
+                        {/* Tombol Edit */}
+                        <button onClick={() => handleOpenEdit(article)}>
+                          <FaEdit className="text-yellow-500 hover:text-yellow-700 cursor-pointer" />
+                        </button>
 
-  <div>
-    <label className="block text-sm font-medium mb-1">Title</label>
-    <input
-      type="text"
-      value={formData.title}
-      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-      className="w-full border rounded p-2"
-      required
-    />
-  </div>
+                        {/* Tombol Hapus */}
+                        <button onClick={() => handleDelete(article.id)}>
+                          <FaTrash className="text-red-500 hover:text-red-700 cursor-pointer" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="text-center py-6 text-gray-500">
+                    Tidak ada artikel ditemukan.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
-  <div>
-    <label className="block text-sm font-medium mb-1">Content</label>
-    <TextEditor
-      value={formData.body}
-      onChange={(value) => setFormData({ ...formData, body: value })}
-      placeholder="Tulis artikelmu di sini..."
-    />
-  </div>
-
-  <div>
-    <label className="block text-sm font-medium mb-1">Cover Image</label>
-    <input
-      type="file"
-      accept="image/*"
-      onChange={(e) =>
-        setFormData({ ...formData, imageFile: e.target.files?.[0] || null })
-      }
-      className="w-full"
-    />
-  </div>
-
-  <button
-    type="submit"
-    disabled={uploading}
-    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
-  >
-    {uploading ? 'Uploading...' : 'Create Article'}
-  </button>
-</form>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Image</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) =>
-                setFormData({ ...formData, imageFile: e.target.files?.[0] || null })
-              }
-              className="w-full"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={uploading}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
-          >
-            {uploading ? 'Uploading...' : 'Create Article'}
-          </button>
-        </form>
-
-        {/* ARTICLE LIST */}
-        {loading ? (
-          <p className="text-gray-500">Loading articles...</p>
-        ) : articles.length === 0 ? (
-          <p className="text-gray-500">No articles yet.</p>
-        ) : (
-          <div className="space-y-6">
-            {articles.map((article) => (
-              <div key={article.id} className="border rounded-xl p-4 shadow-sm">
-                {article.image_path && (
-                  <img
-                    src={article.image_path}
-                    alt={article.title}
-                    className="rounded-lg mb-3"
-                  />
-                )}
-                <h2 className="text-2xl font-semibold">{article.title}</h2>
-                                <div
-  className="text-gray-700 mt-2 prose max-w-none line-clamp-3"
-  dangerouslySetInnerHTML={{ __html: article.body }}
-/>
-
-                <p className="text-sm text-gray-500 mt-3">
-                  By {article.articles_author_id_fkey?.full_name || 'Unknown Author'} •{' '}
-                  {new Date(article.created_at).toLocaleDateString('id-ID', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
-                </p>
-              </div>
-            ))}
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-between items-center px-7.5 py-4">
+            <div className="text-sm text-gray-500">
+              Menampilkan {(currentPage - 1) * itemsPerPage + 1} -{' '}
+              {Math.min(currentPage * itemsPerPage, articles.length)} dari {articles.length} data
+            </div>
+            <div className="flex gap-2">
+              {Array.from({ length: totalPages }, (_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentPage(i + 1)}
+                  className={`px-3 py-1 rounded ${
+                    currentPage === i + 1
+                      ? 'bg-primary text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
+
+      {/* Modal Create/Edit */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-boxdark p-6 rounded-lg w-full max-w-2xl shadow-lg">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-black dark:text-white">
+                {editMode ? 'Edit Artikel' : 'Tambah Artikel'}
+              </h3>
+              <button onClick={() => setShowModal(false)}>
+                <FaTimes className="text-gray-500 hover:text-gray-700" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Judul
+                </label>
+                <input
+                  type="text"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  className="w-full border rounded px-3 py-2 dark:bg-gray-800 dark:text-white dark:border-gray-600"
+                  required
+                />
+              </div>
+
+              {/* Body */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Konten
+                </label>
+                <TextEditor
+                  value={form.body}
+                  onChange={(value: string) => setForm({ ...form, body: value })}
+                />
+              </div>
+
+              {/* Cover Image */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 mt-10">
+                  Cover Image
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="w-full text-sm text-gray-700 dark:text-gray-300"
+                />
+                {form.image_path && (
+                  <img
+                    src={form.image_path}
+                    alt="cover"
+                    className="mt-2 h-32 w-auto rounded border"
+                  />
+                )}
+              </div>
+
+              {/* Buttons */}
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400 text-gray-800"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded bg-primary text-white hover:bg-opacity-90"
+                >
+                  {editMode ? 'Simpan Perubahan' : 'Simpan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </DefaultLayout>
   )
 }
-
-export default AdminPage
