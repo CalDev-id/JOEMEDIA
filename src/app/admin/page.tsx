@@ -91,32 +91,64 @@ export default function AdminArticles() {
     setShowModal(true)
   }
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    const { data, error } = await supabase.storage
-      .from('article-images')
-      .upload(`covers/${Date.now()}_${file.name}`, file)
-
-    if (!error && data) {
-      const { data: publicUrl } = supabase.storage
-        .from('article-images')
-        .getPublicUrl(data.path)
-      setForm((prev) => ({ ...prev, image_path: publicUrl.publicUrl }))
-    }
+  if (!user) {
+    alert("User belum terautentikasi.");
+    return;
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (editMode && selectedArticle) {
-      await supabase.from('articles').update(form).eq('id', selectedArticle.id)
-    } else {
-      await supabase.from('articles').insert([form])
-    }
-    setShowModal(false)
-    fetchArticles()
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Date.now()}_${user.id}.${fileExt}`;
+  const filePath = `covers/${fileName}`;
+
+  const { data, error } = await supabase.storage
+    .from('news-images')
+    .upload(filePath, file, { upsert: true });
+
+  if (error) {
+    console.error('❌ Upload gagal:', error.message);
+    alert('Upload gagal: ' + error.message);
+    return;
   }
+
+  // Dapatkan URL publik
+  const { data: publicUrlData } = supabase.storage
+    .from('news-images')
+    .getPublicUrl(filePath);
+
+  setForm((prev) => ({ ...prev, image_path: publicUrlData.publicUrl }));
+};
+
+
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (!user) {
+    alert('User belum login.');
+    return;
+  }
+
+  if (editMode && selectedArticle) {
+    await supabase
+      .from('articles')
+      .update(form)
+      .eq('id', selectedArticle.id);
+  } else {
+    await supabase.from('articles').insert([
+      {
+        ...form,
+        author_id: user.id, // ✅ tambahkan ini
+      },
+    ]);
+  }
+
+  setShowModal(false);
+  fetchArticles();
+};
+
 
   const handleDelete = async (id: string) => {
     if (!confirm('Yakin ingin menghapus artikel ini?')) return
