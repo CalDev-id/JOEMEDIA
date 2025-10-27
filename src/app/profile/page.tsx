@@ -191,7 +191,8 @@ export default function ProfilePage() {
 
   const ProfileContent = (
     <div className="h-screen">
-      <Navbar active="profile" />
+      {profile?.role != 'admin' ? (<Navbar active="profile" />) : null}
+      
       <div className='max-w-242.5 mx-auto flex justify-center items-center pt-20'>
         <div className="overflow-hidden rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
         {/* Cover Section */}
