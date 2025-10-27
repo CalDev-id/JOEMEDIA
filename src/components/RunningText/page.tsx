@@ -5,19 +5,17 @@ import { FC } from "react";
 interface RunningTextProps {
   text: string;
   speed?: number; // semakin kecil = lebih cepat
-  bgColor?: string;
   textColor?: string;
 }
 
 const RunningText: FC<RunningTextProps> = ({
   text,
   speed = 15,
-  bgColor = "bg-[#222222]",
-  textColor = "text-slate-200",
+  textColor = "text-black",
 }) => {
   return (
     <div
-      className={`overflow-hidden whitespace-nowrap ${bgColor} ${textColor} font-medium py-2`}
+      className={`bg-slate-100 overflow-hidden whitespace-nowrap ${textColor}  font-medium py-3 rounded-lg`}
     >
       <div
         className="inline-block animate-marquee"
@@ -27,7 +25,7 @@ const RunningText: FC<RunningTextProps> = ({
       >
         <span className="text-red-600 mr-2">Breaking News :</span>
         <span className="mr-8">{text}</span>
-        <span className="text-red-600 mr-2">Breaking News :</span>
+        <span className="text-red-600 mr-2">•</span>
         <span className="mr-8">{text}</span>
       </div>
     </div>
