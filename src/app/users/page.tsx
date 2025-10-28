@@ -3,6 +3,9 @@
 import React, { useEffect, useState } from 'react'
 import { FaPlus, FaEdit, FaTrash, FaTimes } from 'react-icons/fa'
 import DefaultLayout from '@/components/Layouts/DefaultLayout'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabaseClient'
+import Loader from '@/components/common/Loader'
 
 type UserItem = {
   id: string
@@ -11,6 +14,7 @@ type UserItem = {
 }
 
 export default function UsersPage() {
+    const router = useRouter()
   const [users, setUsers] = useState<UserItem[]>([])
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
@@ -26,6 +30,25 @@ export default function UsersPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
 
+    useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+
+      // kalau belum login → ke /login
+      if (!user) {
+        router.push('/login')
+        return
+      }
+
+      const role = user.user_metadata?.role
+      // kalau bukan admin → ke /
+      if (role !== 'admin') {
+        router.push('/')
+      }
+    }
+
+    checkAuth()
+  }, [router])
   // Fetch users from our server API
   const fetchUsers = async () => {
     try {
@@ -124,6 +147,9 @@ export default function UsersPage() {
   useEffect(() => {
     setCurrentPage(1)
   }, [search])
+
+if (loading)
+    return <Loader />
 
   return (
     <DefaultLayout>
