@@ -215,12 +215,12 @@ const Navbar: FC<NavbarProps> = ({ active }) => {
           </button>
         </div>
       </div>
-      <div className=" m-5 mb-0">
+        {active === "home" &&       <div className=" m-5 mb-0">
         <RunningText
           text="Stay ahead with the latest news updates from around the world. Your trusted source for breaking news, in-depth analysis, and exclusive stories."
           speed={25}
         />
-      </div>
+      </div>}
     </div>
   );
 };
