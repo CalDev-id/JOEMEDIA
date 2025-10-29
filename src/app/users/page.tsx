@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, FormEvent } from 'react'
+import { useRouter } from 'next/navigation'
 import { FaPlus, FaEdit, FaTrash, FaTimes } from 'react-icons/fa'
 import DefaultLayout from '@/components/Layouts/DefaultLayout'
-import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabaseClient'
 import Loader from '@/components/common/Loader'
+import { supabase } from '@/lib/supabaseClient'
 
 type UserItem = {
   id: string
@@ -13,73 +13,99 @@ type UserItem = {
   user_metadata?: { full_name?: string; role?: string }
 }
 
+type UserForm = {
+  id: string
+  full_name: string
+  email: string
+  password: string
+  role: string
+}
+
 export default function UsersPage() {
-    const router = useRouter()
+  const router = useRouter()
   const [users, setUsers] = useState<UserItem[]>([])
   const [loading, setLoading] = useState(false)
-  const [showModal, setShowModal] = useState(false)
-  const [editMode, setEditMode] = useState(false)
-  const [form, setForm] = useState({
+  const [authChecked, setAuthChecked] = useState(false)
+  const [user, setUser] = useState<any>(null)
+
+  const [form, setForm] = useState<UserForm>({
     id: '',
     full_name: '',
     email: '',
     password: '',
     role: '',
   })
+
+  const [showModal, setShowModal] = useState(false)
+  const [editMode, setEditMode] = useState(false)
   const [search, setSearch] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
 
-    useEffect(() => {
-    const checkAuth = async () => {
+  // ✅ AUTH CHECK pakai tabel "profiles"
+  useEffect(() => {
+    const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
 
-      // kalau belum login → ke /login
       if (!user) {
-        router.push('/login')
+        router.replace('/login')
         return
       }
 
-      const role = user.user_metadata?.role
-      // kalau bukan admin → ke /
-      if (role !== 'admin') {
-        router.push('/')
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (error) {
+        console.error('❌ Gagal mengambil profil:', error)
+        router.replace('/')
+        return
       }
+
+      if (profile?.role !== 'admin') {
+        console.warn('🚫 Role bukan admin:', profile?.role)
+        router.replace('/')
+        return
+      }
+
+      setUser(user)
+      setAuthChecked(true)
+      fetchUsers()
     }
 
-    checkAuth()
+    checkUser()
   }, [router])
-  // Fetch users from our server API
+
+  // 📥 Fetch users dari API
   const fetchUsers = async () => {
     try {
       setLoading(true)
       const res = await fetch('/api/users')
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err?.error || 'Gagal memuat users')
-      }
+      if (!res.ok) throw new Error('Gagal memuat pengguna')
       const data: UserItem[] = await res.json()
       setUsers(data || [])
     } catch (err: any) {
-      console.error(err)
+      console.error('❌ Fetch users error:', err)
       alert('Gagal mengambil daftar pengguna: ' + (err.message || err))
     } finally {
       setLoading(false)
     }
   }
 
+  // 🔄 Reset halaman saat search berubah
   useEffect(() => {
-    fetchUsers()
-  }, [])
+    setCurrentPage(1)
+  }, [search])
 
-  // open create modal
+  // 🔄 Modal handlers
   const handleOpenCreate = () => {
     setForm({ id: '', full_name: '', email: '', password: '', role: '' })
     setEditMode(false)
     setShowModal(true)
   }
 
-  // open edit modal
   const handleOpenEdit = (user: UserItem) => {
     setForm({
       id: user.id,
@@ -92,64 +118,52 @@ export default function UsersPage() {
     setShowModal(true)
   }
 
-  // delete user
   const handleDelete = async (id: string) => {
     if (!confirm('Yakin ingin menghapus user ini?')) return
     try {
       const res = await fetch(`/api/users?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err?.error || 'Gagal menghapus user')
-      }
-      alert('User berhasil dihapus')
+      if (!res.ok) throw new Error('Gagal menghapus user')
+      alert('✅ User berhasil dihapus')
       fetchUsers()
     } catch (err: any) {
-      console.error(err)
+      console.error('❌ Delete user error:', err)
       alert('Gagal menghapus user: ' + (err.message || err))
     }
   }
 
-  // create / update user via API
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     try {
+      setLoading(true)
       const method = editMode ? 'PUT' : 'POST'
-      const payload = { ...form }
-      // password kosong on edit will be handled server-side (ignore)
       const res = await fetch('/api/users', {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(form),
       })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err?.error || 'Gagal menyimpan user')
-      }
-      alert(editMode ? 'User diperbarui' : 'User dibuat')
+      if (!res.ok) throw new Error('Gagal menyimpan user')
+      alert(editMode ? '✅ User diperbarui' : '✅ User dibuat')
       setShowModal(false)
-      // reset form password for safety
-      setForm((f) => ({ ...f, password: '' }))
+      setForm({ id: '', full_name: '', email: '', password: '', role: '' })
       fetchUsers()
     } catch (err: any) {
-      console.error(err)
+      console.error('❌ Submit user error:', err)
       alert('Gagal menyimpan user: ' + (err.message || err))
+    } finally {
+      setLoading(false)
     }
   }
 
-  // filter & pagination
-  const filtered = users.filter((u) =>
+  // 🔍 Filter + Pagination
+  const filteredUsers = users.filter((u) =>
     (u.user_metadata?.full_name || '').toLowerCase().includes(search.toLowerCase())
   )
-  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1
-  const paginatedUsers = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / itemsPerPage))
+  const paginatedUsers = filteredUsers.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
 
-  // reset page when search changes
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [search])
-
-if (loading)
-    return <Loader />
 
   return (
     <DefaultLayout>
@@ -209,7 +223,7 @@ if (loading)
 
         {totalPages > 1 && (
           <div className="flex justify-between items-center px-7.5 py-4">
-            <div className="text-sm text-gray-500">Menampilkan {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filtered.length)} dari {filtered.length} data</div>
+            <div className="text-sm text-gray-500">Menampilkan {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredUsers.length)} dari {filteredUsers.length} data</div>
             <div className="flex gap-2">
               {Array.from({ length: totalPages }, (_, i) => (
                 <button key={i} onClick={() => setCurrentPage(i + 1)} className={`px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{i + 1}</button>
@@ -249,7 +263,6 @@ if (loading)
                   <option value="">Pilih role (kosong = user)</option>
                   <option value="user">user</option>
                   <option value="admin">admin</option>
-                  <option value="editor">editor</option>
                 </select>
               </div>
 
