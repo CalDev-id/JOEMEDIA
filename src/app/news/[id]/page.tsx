@@ -73,6 +73,7 @@ export default function NewsDetailPage() {
   return (
     <div>
       <Navbar active="page" />
+      { loading ? <Loader /> :
       <div className="mx-auto p-6 md:px-40 mt-10">
         {/* <button
           onClick={() => router.push("/")}
@@ -126,6 +127,7 @@ export default function NewsDetailPage() {
           <div className="md:w-1/4"></div>
         </div>
       </div>
+      }
       <Footer />
     </div>
   );

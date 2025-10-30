@@ -92,16 +92,13 @@ const Navbar: FC<NavbarProps> = ({ active }) => {
             </div>
             <ul className="menu dropdown-content menu-sm z-1 mt-3 w-52 rounded-box bg-slate-600 p-2 shadow ">
             <li>
-              <a>Home</a>
+              <Link href="/">Home</Link>
             </li>
             <li>
-              <a>News</a>
+              <Link href="/allNews">News</Link>
             </li>
             <li>
-              <a>Listen</a>
-            </li>
-            <li>
-              <a>About Us</a>
+              <Link href="/aboutUs">About Us</Link>
             </li>
             </ul>
           </div>
@@ -118,6 +115,7 @@ const Navbar: FC<NavbarProps> = ({ active }) => {
           </Link>
         </div>
         <div className="navbar-end">
+            <Link href="/allNews">
           <button className="btn btn-ghost btn-circle">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -135,6 +133,7 @@ const Navbar: FC<NavbarProps> = ({ active }) => {
               />{" "}
             </svg>
           </button>
+          </Link>
         </div>
       </div>
 
@@ -156,16 +155,14 @@ const Navbar: FC<NavbarProps> = ({ active }) => {
         <div className="navbar-center">
           <ul className="menu menu-horizontal px-1 font-medium text-slate-100">
             <li>
-              <a>Home</a>
+              <Link href="/">Home</Link>
             </li>
             <li>
-              <a>News</a>
+              <Link href="/allNews">News</Link>
             </li>
+
             <li>
-              <a>Listen</a>
-            </li>
-            <li>
-              <a>About Us</a>
+              <Link href="/aboutUs">About Us</Link>
             </li>
 
             {/* Tampilkan dropdown jika login, atau tombol login jika belum */}
@@ -196,6 +193,9 @@ const Navbar: FC<NavbarProps> = ({ active }) => {
           </ul>
         </div>
         <div className="navbar-end">
+            <Link href="/allNews">
+
+            
           <button className="btn btn-ghost btn-circle">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -213,6 +213,7 @@ const Navbar: FC<NavbarProps> = ({ active }) => {
               />{" "}
             </svg>
           </button>
+          </Link>
         </div>
       </div>
         {active === "home" &&       <div className=" m-5 mb-0">
