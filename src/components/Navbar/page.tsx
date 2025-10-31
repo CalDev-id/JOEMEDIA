@@ -104,7 +104,7 @@ const Navbar: FC<NavbarProps> = ({ active }) => {
           </div>
         </div>
         <div className="navbar-center">
-          <Link className="bg-white" href="/">
+          <Link className="" href="/">
             <Image
               width={200}
               height={100}
@@ -141,7 +141,7 @@ const Navbar: FC<NavbarProps> = ({ active }) => {
 
       <div className="navbar hidden bg-[#000000] px-20 shadow-sm sm:flex">
         <div className="navbar-start">
-          <Link className="bg-white" href="/">
+          <Link className="" href="/">
             <Image
               width={200}
               height={100}

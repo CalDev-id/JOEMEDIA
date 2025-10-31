@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    formats: ['image/avif', 'image/webp'], // ✅ Tambahkan ini untuk format modern
     remotePatterns: [
       {
         protocol: 'https',
@@ -8,7 +9,7 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'yxaeggaqwiyffdhkeuph.supabase.co', // ✅ Tambahkan domain Supabase kamu
+        hostname: 'yxaeggaqwiyffdhkeuph.supabase.co', // ✅ Domain Supabase kamu
       },
     ],
     dangerouslyAllowSVG: true,
