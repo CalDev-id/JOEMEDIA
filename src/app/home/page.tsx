@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Footer from "@/components/Footer/footer";
 import Navbar from "@/components/Navbar/page";
 import Loader from "@/components/common/Loader";
 import Maps from "@/components/Maps/maps";
+import useEmblaCarousel from "embla-carousel-react";
+import Autoplay from "embla-carousel-autoplay";
+import { motion } from "framer-motion";
 
 interface Article {
   id: string;
@@ -15,6 +18,8 @@ interface Article {
   image_path: string | null;
   published: boolean;
   created_at: string;
+  created_by: string | null;
+  category: string | null;
   articles_author_id_fkey: {
     full_name: string | null;
   } | null;
@@ -60,6 +65,8 @@ export default function HomePage() {
         image_path,
         published,
         created_at,
+        created_by,
+        category,
         articles_author_id_fkey ( full_name )
       `,
       )
@@ -112,6 +119,101 @@ export default function HomePage() {
 
   const terakhir = articles.slice(13, 17);
 
+  const autoplay = Autoplay({
+    delay: 4000,
+    stopOnInteraction: false,
+    stopOnMouseEnter: true,
+  });
+
+  const [emblaRef, emblaApi] = useEmblaCarousel(
+    {
+      loop: true,
+      align: "center",
+      skipSnaps: false,
+      dragFree: false,
+    },
+    [autoplay],
+  );
+
+// 🔒 Cegah klik saat sedang drag
+const [isDragging, setIsDragging] = useState(false);
+
+useEffect(() => {
+  if (!emblaApi) return;
+
+  let isPointerDown = false;
+  let startX = 0;
+  let startY = 0;
+
+  const onPointerDown = (e: PointerEvent) => {
+    isPointerDown = true;
+    startX = e.clientX;
+    startY = e.clientY;
+  };
+
+  const onPointerMove = (e: PointerEvent) => {
+    if (!isPointerDown) return;
+    const deltaX = Math.abs(e.clientX - startX);
+    const deltaY = Math.abs(e.clientY - startY);
+    if (deltaX > 5 || deltaY > 5) {
+      setIsDragging(true);
+    }
+  };
+
+  const onPointerUp = () => {
+    isPointerDown = false;
+    setTimeout(() => setIsDragging(false), 100);
+  };
+
+  emblaApi.containerNode().addEventListener("pointerdown", onPointerDown);
+  emblaApi.containerNode().addEventListener("pointermove", onPointerMove);
+  emblaApi.containerNode().addEventListener("pointerup", onPointerUp);
+
+  return () => {
+    const container = emblaApi.containerNode();
+    container.removeEventListener("pointerdown", onPointerDown);
+    container.removeEventListener("pointermove", onPointerMove);
+    container.removeEventListener("pointerup", onPointerUp);
+  };
+}, [emblaApi]);
+
+
+  useEffect(() => {
+    if (!emblaApi) return;
+
+    // Ambil instance plugin autoplay dari emblaApi
+    const autoplayInstance = emblaApi.plugins()?.autoplay as
+      | ReturnType<typeof Autoplay>
+      | undefined;
+
+    if (!autoplayInstance) return; // pastikan instance ada
+
+    // Jalankan autoplay saat embla siap
+    autoplayInstance.play();
+
+    // Supaya autoplay lanjut setelah interaksi user
+    const handlePointerUp = () => autoplayInstance.play();
+    const handleSelect = () => autoplayInstance.play();
+
+    emblaApi.on("pointerUp", handlePointerUp);
+    emblaApi.on("select", handleSelect);
+
+    return () => {
+      emblaApi.off("pointerUp", handlePointerUp);
+      emblaApi.off("select", handleSelect);
+    };
+  }, [emblaApi]);
+
+  // Re-init jika ukuran berubah
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    emblaApi.reInit();
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    emblaApi.on("select", onSelect);
+  }, [emblaApi, onSelect]);
   return (
     <div>
       <Navbar active="home" />
@@ -121,61 +223,74 @@ export default function HomePage() {
         <div className="mx-auto bg-white p-6">
           {/* 🧩 SECTION 1: 1 berita terakhir */}
           <div className="flex flex-col gap-8 px-0 sm:px-20 md:flex-row">
-            <div
-              className="cursor-pointer md:w-[60%]"
-              onClick={() => router.push(`/news/${latestArticle.id}`)}
-            >
-              {/* Bungkus gambar dan overlay agar tidak melebar */}
-              <div className="relative overflow-hidden rounded-2xl">
-                {/* Gambar */}
-                {latestArticle.image_path && (
-                  <img
-                    src={latestArticle.image_path}
-                    alt={latestArticle.title}
-                    className="h-[400px] w-full object-cover transition-transform duration-500 hover:scale-105 md:h-[600px]"
-                  />
-                )}
-
-                {/* Overlay gradasi */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
-
-                {/* Konten di atas gambar */}
-                <div className="absolute bottom-0 p-6 text-white md:p-8">
-                  <h2 className="mb-3 line-clamp-2 text-xl font-semibold md:font-extrabold leading-tight drop-shadow-lg md:text-4xl">
-                    {latestArticle.title}
-                  </h2>
-
+            {/* 🧩 SECTION 1: Semua berita bisa digeser */}
+            <div className="embla w-full overflow-hidden" ref={emblaRef}>
+              <div className="embla__container flex">
+                {articles.map((article) => (
                   <div
-                    className="mb-4 hidden overflow-hidden text-sm text-gray-200 md:block md:text-base"
-                    style={{
-                      display: "-webkit-box",
-                      WebkitBoxOrient: "vertical",
-                      WebkitLineClamp: 3,
-                    }}
+                    key={article.id}
+                    className="embla__slide min-w-0 flex-[0_0_100%]" // 1 berita per layar
                   >
-                    {latestArticle.body
-                      ? latestArticle.body.replace(/<[^>]+>/g, "")
-                      : ""}
-                  </div>
+                    <div
+                      className="mx-auto  cursor-pointer"
+                      onClick={() => {
+                        if (!isDragging) router.push(`/news/${article.id}`);
+                      }}
+                    >
+                      {/* Bungkus gambar dan overlay */}
+                      <div className="relative overflow-hidden rounded-2xl">
+                        {/* Gambar */}
+                        {article.image_path && (
+                          <img
+                            src={article.image_path}
+                            alt={article.title}
+                            className="h-[400px] w-full object-cover transition-transform duration-500 hover:scale-105 md:h-[600px]"
+                          />
+                        )}
 
-                  {/* Author dan tanggal */}
-                  <p className="text-xs text-gray-300 md:text-sm">
-                    By{" "}
-                    <span className="font-medium text-white">
-                      {latestArticle.articles_author_id_fkey?.full_name ||
-                        "Unknown Author"}
-                    </span>{" "}
-                    •{" "}
-                    {new Date(latestArticle.created_at).toLocaleDateString(
-                      "id-ID",
-                      {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      },
-                    )}
-                  </p>
-                </div>
+                        {/* Overlay gradasi */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+
+                        {/* Konten di atas gambar */}
+                        <div className="absolute bottom-0 p-6 text-white md:p-8">
+                          <h2 className="mb-3 line-clamp-2 text-xl font-semibold leading-tight drop-shadow-lg md:text-4xl md:font-extrabold">
+                            {article.title}
+                          </h2>
+
+                          <div
+                            className="mb-4 hidden text-sm text-gray-200 md:block md:text-base"
+                            style={{
+                              display: "-webkit-box",
+                              WebkitBoxOrient: "vertical",
+                              WebkitLineClamp: 3,
+                              overflow: "hidden",
+                            }}
+                          >
+                            {article.body
+                              ? article.body.replace(/<[^>]+>/g, "")
+                              : ""}
+                          </div>
+
+                          <p className="text-xs text-gray-300 md:text-sm">
+                            By{" "}
+                            <span className="font-medium text-white">
+                              {article.created_by || "Unknown Author"}
+                            </span>{" "}
+                            •{" "}
+                            {new Date(article.created_at).toLocaleDateString(
+                              "id-ID",
+                              {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                              },
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -277,7 +392,7 @@ export default function HomePage() {
               <p className="font-bold md:text-xl">Trending News</p>
               <button
                 className="text-sm text-red-600 hover:underline md:text-base md:font-semibold"
-                onClick={() => router.push("/news")}
+                onClick={() => router.push("/allNews")}
               >
                 See More
               </button>
@@ -333,7 +448,7 @@ export default function HomePage() {
               <p className="font-bold md:text-xl">Must Read</p>
               <button
                 className="text-sm text-red-600 hover:underline md:text-base md:font-semibold"
-                onClick={() => router.push("/news")}
+                onClick={() => router.push("/allNews")}
               >
                 See More
               </button>
@@ -479,7 +594,7 @@ export default function HomePage() {
               <p className="font-bold md:text-xl">Trending News</p>
               <button
                 className="text-sm text-red-600 hover:underline md:text-base md:font-semibold"
-                onClick={() => router.push("/news")}
+                onClick={() => router.push("/allNews")}
               >
                 See More
               </button>
@@ -529,7 +644,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <Maps />
+          {/* <Maps /> */}
         </div>
       )}
       <Footer />

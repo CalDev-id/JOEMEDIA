@@ -136,7 +136,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar active="home" />
 
-      <main className="mx-auto max-w-5xl px-4 py-8">
+      <main className="mx-auto max-w-5xl px-4 py-8 min-h-screen">
         {/* Search */}
         <div className="mb-6">
           <label htmlFor="search" className="sr-only">
