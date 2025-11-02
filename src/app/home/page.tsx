@@ -323,7 +323,7 @@ useEffect(() => {
                       </p>
                       <p className="mt-3 text-xs text-gray-500">
                         By{" "}
-                        {article.articles_author_id_fkey?.full_name ||
+                        {article.created_by ||
                           "Unknown Author"}{" "}
                         •{" "}
                         {new Date(article.created_at).toLocaleDateString(
@@ -367,7 +367,7 @@ useEffect(() => {
                       </p>
                       <p className="mt-2 text-xs text-gray-500 md:text-sm">
                         By{" "}
-                        {article.articles_author_id_fkey?.full_name ||
+                        {article.created_by ||
                           "Unknown Author"}{" "}
                         •{" "}
                         {new Date(article.created_at).toLocaleDateString(
@@ -424,7 +424,7 @@ useEffect(() => {
                     </p>
                     <p className="mt-3 text-xs text-gray-500">
                       By{" "}
-                      {article.articles_author_id_fkey?.full_name ||
+                      {article.created_by ||
                         "Unknown Author"}{" "}
                       •{" "}
                       {new Date(article.created_at).toLocaleDateString(
@@ -481,7 +481,7 @@ useEffect(() => {
                   </p>
                   <p className="text-xs text-gray-500 md:text-sm">
                     By{" "}
-                    {moreArticles.articles_author_id_fkey?.full_name ||
+                    {moreArticles.created_by ||
                       "Unknown Author"}{" "}
                     •{" "}
                     {new Date(moreArticles.created_at).toLocaleDateString(
@@ -526,7 +526,7 @@ useEffect(() => {
                       </p>
                       <p className="mt-3 text-xs text-gray-500">
                         By{" "}
-                        {article.articles_author_id_fkey?.full_name ||
+                        {article.created_by ||
                           "Unknown Author"}{" "}
                         •{" "}
                         {new Date(article.created_at).toLocaleDateString(
@@ -570,7 +570,7 @@ useEffect(() => {
                       </p>
                       <p className="mt-2 text-xs text-gray-500 md:text-sm">
                         By{" "}
-                        {article.articles_author_id_fkey?.full_name ||
+                        {article.created_by ||
                           "Unknown Author"}{" "}
                         •{" "}
                         {new Date(article.created_at).toLocaleDateString(
@@ -626,7 +626,7 @@ useEffect(() => {
                     </p>
                     <p className="mt-3 text-xs text-gray-500">
                       By{" "}
-                      {article.articles_author_id_fkey?.full_name ||
+                      {article.created_by ||
                         "Unknown Author"}{" "}
                       •{" "}
                       {new Date(article.created_at).toLocaleDateString(

@@ -257,7 +257,7 @@ const Navbar: FC<NavbarProps> = ({ active }) => {
 
       {/* Running Text di bawah Navbar */}
       {active === "home" && (
-        <div className="mt-[120px] m-5 mb-0">
+        <div className="mt-[80px] m-5 mb-0">
           <RunningText
             text="Stay ahead with the latest news updates from around the world. Your trusted source for breaking news, in-depth analysis, and exclusive stories."
             speed={25}
