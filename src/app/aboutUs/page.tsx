@@ -12,7 +12,7 @@ export default function About() {
         <meta name="description" content="Joe Media — Jujur, Objektif, Edukatif" />
       </Head>
 
-      <main className="min-h-screen bg-gray-50 text-gray-900">
+      <main className="min-h-screen bg-gray-50 text-gray-90 pt-20">
         <Navbar active="about" />
         <section className="max-w-5xl mx-auto px-6 py-12">
           <div className="bg-white rounded-2xl shadow-md p-8">
