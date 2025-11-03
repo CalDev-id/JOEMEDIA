@@ -8,6 +8,7 @@ import Navbar from "@/components/Navbar/page";
 import Footer from "@/components/Footer/footer";
 import { FaFacebookF, FaTwitter, FaWhatsapp } from "react-icons/fa";
 
+// ==================== Types ====================
 interface Article {
   id: string;
   title: string;
@@ -21,27 +22,62 @@ interface Article {
   articles_author_id_fkey: { full_name: string | null }[];
 }
 
+interface Comment {
+  id: number;
+  content: string;
+  created_at: string;
+  author_id: string | null;
+  profiles?: {
+    full_name: string | null;
+    avatar_url?: string | null; // tambahkan field avatar_url
+  };
+}
+
+
+// ==================== Component ====================
 export default function NewsDetailPage() {
   const router = useRouter();
   const params = useParams();
   const { id } = params;
+
+  // ---------- State ----------
   const [article, setArticle] = useState<Article | null>(null);
   const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [user, setUser] = useState<any>(null);
+
+  // ==================== Effects ====================
+
+  // Fetch article by ID
   useEffect(() => {
-    if (id) {
-      fetchArticle(id as string);
-    }
+    if (id) fetchArticle(id as string);
   }, [id]);
+
+  // Get current user (if logged in)
+  useEffect(() => {
+    getUser();
+  }, []);
+
+  // Fetch comments for this article
+  useEffect(() => {
+    if (id) fetchComments(id as string);
+  }, [id]);
+
+  // ==================== Data Fetching ====================
+
+  const getUser = async () => {
+    const { data } = await supabase.auth.getUser();
+    setUser(data?.user || null);
+  };
 
   const fetchArticle = async (articleId: string) => {
     setLoading(true);
-
     const { data, error } = await supabase
       .from("articles")
-      .select(
-        `
+      .select(`
         id,
         title,
         body,
@@ -52,25 +88,19 @@ export default function NewsDetailPage() {
         category,
         tags,
         articles_author_id_fkey ( full_name )
-      `,
-      )
+      `)
       .eq("id", articleId)
       .single();
 
     if (error) {
       console.error("❌ Error fetching article:", error);
-    } else {
-      // ✅ pastikan tags dari jsonb selalu array
+    } else if (data) {
       setArticle({
         ...data,
         tags: Array.isArray(data.tags) ? data.tags : [],
       });
-
-      if (data?.category) {
-        fetchRelatedArticles(data.category, articleId);
-      }
+      if (data.category) fetchRelatedArticles(data.category, articleId);
     }
-
     setLoading(false);
   };
 
@@ -82,39 +112,94 @@ export default function NewsDetailPage() {
       .neq("id", excludeId)
       .limit(3);
 
+    if (error) console.error("❌ Error fetching related news:", error);
+    setRelatedArticles((data || []) as any);
+
+  };
+
+const fetchComments = async (articleId: string) => {
+  const { data, error } = await supabase
+    .from("comments")
+    .select(`
+      id,
+      content,
+      created_at,
+      author_id,
+      profiles ( full_name, avatar_url )
+    `)
+    .eq("article_id", articleId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("❌ Error fetching comments:", error);
+    return;
+  }
+
+  // Transform data Supabase agar sesuai tipe Comment
+  const parsedComments: Comment[] = (data || []).map((c: any) => ({
+    id: c.id,
+    content: c.content,
+    created_at: c.created_at,
+    author_id: c.author_id,
+    profiles: c.profiles || { full_name: "Anonim", avatar_url: "/images/logo/user.png" }, // langsung pakai object
+  }));
+
+  setComments(parsedComments);
+};
+
+
+
+
+
+  const handleAddComment = async () => {
+    if (!user) {
+      alert("Silakan login untuk menulis komentar.");
+      return;
+    }
+    if (!newComment.trim()) return;
+
+    const { error } = await supabase.from("comments").insert({
+      article_id: article?.id,
+      author_id: user.id,
+      content: newComment.trim(),
+    });
+
     if (error) {
-      console.error("❌ Error fetching related news:", error);
+      console.error("❌ Error adding comment:", error);
     } else {
-      setRelatedArticles((data || []) as Article[]);
+      setNewComment("");
+      fetchComments(article!.id);
     }
   };
+
+  // ==================== Sharing ====================
 
   const shareArticle = (platform: string) => {
     const url = window.location.href;
     const text = `Baca berita menarik: ${article?.title}`;
     const shareUrls: Record<string, string> = {
       twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-        text,
+        text
       )}&url=${encodeURIComponent(url)}`,
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-        url,
+        url
       )}`,
       whatsapp: `https://api.whatsapp.com/send?text=${encodeURIComponent(
-        text + " " + url,
+        text + " " + url
       )}`,
     };
     window.open(shareUrls[platform], "_blank");
   };
 
-  if (loading) return <Loader />;
+  // ==================== Render ====================
 
-  if (!article) {
+  if (loading) return <Loader />;
+  if (!article)
     return (
       <div className="mx-auto max-w-3xl p-6 text-gray-500">
         Article not found.
       </div>
     );
-  }
 
   return (
     <div>
@@ -122,18 +207,16 @@ export default function NewsDetailPage() {
       <div className="mx-auto mt-14 min-h-screen p-6 md:px-40">
         {/* ---------- Category ---------- */}
         <div className="my-6">
-          <span className="text-sm font-semibold text-gray-600">
-            Category:{" "}
-          </span>
+          <span className="text-sm font-semibold text-gray-600">Category: </span>
           <span className="rounded-md bg-purple-100 px-3 py-1 text-sm text-purple-800">
             {article.category || "Uncategorized"}
           </span>
         </div>
-        <div className="items-cente mb-4 flex">
+
+        {/* ---------- Title ---------- */}
+        <div className="items-center mb-4 flex">
           <span className="mr-2 bg-red-600 pt-3 text-2xl text-red-600">.</span>
-          <h1 className="text-5xl font-extrabold text-black-2">
-            {article.title}
-          </h1>
+          <h1 className="text-5xl font-extrabold text-black-2">{article.title}</h1>
         </div>
 
         <p className="mb-6 text-sm text-gray-500">
@@ -147,7 +230,7 @@ export default function NewsDetailPage() {
         </p>
 
         <div className="md:flex">
-          {/* ---------- Left Main Content ---------- */}
+          {/* ---------- Main Content ---------- */}
           <div className="md:w-3/4">
             {article.image_path && (
               <img
@@ -160,10 +243,7 @@ export default function NewsDetailPage() {
             <div className="md:flex">
               {/* ---------- Share Buttons ---------- */}
               <div className="flex flex-col items-start gap-4 md:w-1/4">
-                <h3 className="mb-2 text-sm font-semibold text-gray-700">
-                  Share:
-                </h3>
-
+                <h3 className="mb-2 text-sm font-semibold text-gray-700">Share:</h3>
                 <button
                   onClick={() => shareArticle("facebook")}
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1877F2] text-white transition hover:bg-[#0d65d9]"
@@ -171,7 +251,6 @@ export default function NewsDetailPage() {
                 >
                   <FaFacebookF size={18} />
                 </button>
-
                 <button
                   onClick={() => shareArticle("twitter")}
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1DA1F2] text-white transition hover:bg-[#0d8bd6]"
@@ -179,7 +258,6 @@ export default function NewsDetailPage() {
                 >
                   <FaTwitter size={18} />
                 </button>
-
                 <button
                   onClick={() => shareArticle("whatsapp")}
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-[#25D366] text-white transition hover:bg-[#1eb75b]"
@@ -192,40 +270,108 @@ export default function NewsDetailPage() {
               {/* ---------- Article Body ---------- */}
               <div className="md:w-3/4">
                 <div className="prose max-w-none leading-relaxed text-gray-800">
-                  {article.body.split("\n").map((paragraph, index) => (
-                    <p key={index} className="mb-4">
+                  {article.body.split("\n").map((paragraph, i) => (
+                    <p key={i} className="mb-4">
                       <div dangerouslySetInnerHTML={{ __html: paragraph }} />
                     </p>
                   ))}
                 </div>
 
                 {/* ---------- Tags ---------- */}
-                <div>
-                  <h3 className="mt-5 mb-4 text-lg font-semibold text-gray-700">
-                    Tags:
-                  </h3>
-                                  <div className="mt-4 flex flex-wrap gap-2">
-                  {article.tags?.length > 0 ? (
-                    article.tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800"
-                      >
-                        #{tag}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-sm text-gray-500">
-                      No tags available
-                    </span>
-                  )}
+                <div className="mt-6">
+                  <h3 className="mb-3 text-lg font-semibold text-gray-700">Tags:</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {article.tags?.length > 0 ? (
+                      article.tags.map((tag, i) => (
+                        <span
+                          key={i}
+                          className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800"
+                        >
+                          #{tag}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-gray-500">No tags available</span>
+                    )}
+                  </div>
                 </div>
+
+                {/* ---------- Comments Section ---------- */}
+                <div className="mt-10 border-t pt-6">
+                  <h3 className="mb-4 text-lg font-semibold text-gray-800">
+                    Komentar
+                  </h3>
+
+                  {/* Form komentar */}
+                  {user ? (
+                    <div className="mb-6">
+                      <textarea
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="Tulis komentar kamu..."
+                        className="w-full rounded-md border border-gray-300 p-3 text-sm focus:border-blue-500 focus:outline-none"
+                      />
+                      <button
+                        onClick={handleAddComment}
+                        className="mt-3 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                      >
+                        Kirim Komentar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mb-6 rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                      💬 Kamu harus{" "}
+                      <span
+                        onClick={() => router.push("/login")}
+                        className="cursor-pointer font-semibold text-blue-600 hover:underline"
+                      >
+                        login
+                      </span>{" "}
+                      untuk menulis komentar.
+                    </div>
+                  )}
+
+{/* Daftar komentar */}
+{comments.length > 0 ? (
+  <div className="space-y-4">
+    {comments.map((c) => (
+      <div
+        key={c.id}
+        className="flex items-start gap-3 rounded-md border border-gray-200 bg-gray-50 p-4 shadow-sm"
+      >
+        {/* Foto profil */}
+        <img
+          src={c.profiles?.avatar_url || "/images/logo/user.png"} // default avatar jika null
+          alt={c.profiles?.full_name || "Anonim"}
+          className="h-10 w-10 rounded-full object-cover"
+        />
+
+        <div className="flex-1">
+          <p className="text-sm text-gray-800">{c.content}</p>
+          <p className="mt-2 text-xs text-gray-500">
+            Oleh {c.profiles?.full_name || "Anonim"} •{" "}
+            {new Date(c.created_at).toLocaleDateString("id-ID", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+        </div>
+      </div>
+    ))}
+  </div>
+) : (
+  <p className="text-sm text-gray-500">Belum ada komentar.</p>
+)}
+
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ---------- Sidebar (Ads + Related News) ---------- */}
+          {/* ---------- Sidebar ---------- */}
           <div className="mt-8 md:mt-0 md:w-1/4 md:pl-6">
             <div className="mb-6 rounded-lg bg-gray-100 p-4 text-center shadow">
               <p className="text-sm text-gray-500">Iklan</p>
