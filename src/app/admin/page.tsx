@@ -401,9 +401,9 @@ export default function AdminArticles() {
               <option value="Internasional">Internasional</option>
               <option value="Politik">Politik</option>
               <option value="Ekonomi">Ekonomi</option>
-              <option value="Hiburan & Lifestyle">Hiburan & Lifestyle</option>
+              <option value="Hiburan-Lifestyle">Hiburan & Lifestyle</option>
               <option value="Olahraga">Olahraga</option>
-              <option value="Teknologi & Otomotif">Teknologi & Otomotif</option>
+              <option value="Teknologi-Otomotif">Teknologi & Otomotif</option>
             </select>
           </div>
 

@@ -170,31 +170,17 @@ const Navbar: FC<NavbarProps> = ({ active }) => {
               <li>
                 <Link href="/allNews">News</Link>
               </li>
-              <li>
-                <Link href="/aboutUs">Nasional</Link>
-              </li>
-                            <li>
-                <Link href="/aboutUs">Internasional</Link>
-              </li>
-                            <li>
-                <Link href="/aboutUs">Politik</Link>
-              </li>
-                            <li>
-                <Link href="/aboutUs">Ekonomi</Link>
-              </li>
-                            <li>
-                <Link href="/aboutUs">Hiburan & Lifestyle</Link>
-              </li>
-                            <li>
-                <Link href="/aboutUs">Olahraga</Link>
-              </li>
-                            <li>
-                <Link href="/aboutUs">Teknologi & Otomotif</Link>
-              </li>
+<li><Link href="/category/Nasional">Nasional</Link></li>
+<li><Link href="/category/Internasional">Internasional</Link></li>
+<li><Link href="/category/Politik">Politik</Link></li>
+<li><Link href="/category/Ekonomi">Ekonomi</Link></li>
+<li><Link href="/category/Hiburan-Lifestyle">Hiburan & Lifestyle</Link></li>
+<li><Link href="/category/Olahraga">Olahraga</Link></li>
+<li><Link href="/category/Teknologi-Otomotif">Teknologi & Otomotif</Link></li>
+
               <li>
                 <Link href="/aboutUs">About us</Link>
               </li>
-
           </ul>
         </div>
 
