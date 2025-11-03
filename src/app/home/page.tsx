@@ -48,8 +48,11 @@ export default function HomePage() {
       }
     };
 
-    fetchUser();
-    fetchArticles();
+  (async () => {
+    setLoading(true);
+    await Promise.all([fetchUser(), fetchArticles()]);
+    setLoading(false);
+  })();
   }, []);
 
   const fetchArticles = async () => {
@@ -71,7 +74,8 @@ export default function HomePage() {
       `,
       )
       .eq("published", true)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(20);
 
     if (error) {
       console.error("❌ Error fetching articles:", error);
