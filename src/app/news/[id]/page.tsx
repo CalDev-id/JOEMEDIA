@@ -7,6 +7,7 @@ import Loader from "@/components/common/Loader";
 import Navbar from "@/components/Navbar/page";
 import Footer from "@/components/Footer/footer";
 import { FaFacebookF, FaTwitter, FaWhatsapp } from "react-icons/fa";
+import AdSlot from "@/components/Ads/adsSlot";
 
 // ==================== Types ====================
 interface Article {
@@ -374,10 +375,7 @@ const fetchComments = async (articleId: string) => {
           {/* ---------- Sidebar ---------- */}
           <div className="mt-8 md:mt-0 md:w-1/4 md:pl-6">
             <div className="mb-6 rounded-lg bg-gray-100 p-4 text-center shadow">
-              <p className="text-sm text-gray-500">Iklan</p>
-              <p className="mt-2 font-semibold text-gray-700">
-                Pasang iklan kamu di sini
-              </p>
+<AdSlot slot="news_sidebar" />
             </div>
 
             <div>

@@ -6,10 +6,9 @@ import { supabase } from "@/lib/supabaseClient";
 import Footer from "@/components/Footer/footer";
 import Navbar from "@/components/Navbar/page";
 import Loader from "@/components/common/Loader";
-import Maps from "@/components/Maps/maps";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
-import { motion } from "framer-motion";
+import AdSlot from "@/components/Ads/adsSlot";
 
 interface Article {
   id: string;
@@ -649,6 +648,7 @@ useEffect(() => {
           </div>
 
           {/* <Maps /> */}
+          <AdSlot slot="home_banner" className="my-6" />
         </div>
       )}
       <Footer />
