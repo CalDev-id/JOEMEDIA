@@ -274,7 +274,7 @@ const fetchNewArticles = async () => {
                 <h3 className="mb-2 text-sm font-semibold text-gray-700">
                   Share:
                 </h3>
-                <div className="flex flex-row gap-3">
+                <div className="flex flex-wrap gap-3">
                   <button
                     onClick={() => shareArticle("facebook")}
                     className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1877F2] text-white transition hover:bg-[#0d65d9]"
