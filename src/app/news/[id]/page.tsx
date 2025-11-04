@@ -34,7 +34,6 @@ interface Comment {
   };
 }
 
-
 // ==================== Component ====================
 export default function NewsDetailPage() {
   const router = useRouter();
@@ -78,7 +77,8 @@ export default function NewsDetailPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("articles")
-      .select(`
+      .select(
+        `
         id,
         title,
         body,
@@ -89,7 +89,8 @@ export default function NewsDetailPage() {
         category,
         tags,
         articles_author_id_fkey ( full_name )
-      `)
+      `,
+      )
       .eq("id", articleId)
       .single();
 
@@ -100,57 +101,67 @@ export default function NewsDetailPage() {
         ...data,
         tags: Array.isArray(data.tags) ? data.tags : [],
       });
-      if (data.category) fetchRelatedArticles(data.category, articleId);
+      fetchNewArticles();
     }
     setLoading(false);
   };
 
-  const fetchRelatedArticles = async (category: string, excludeId: string) => {
-    const { data, error } = await supabase
-      .from("articles")
-      .select("id, title, image_path")
-      .eq("category", category)
-      .neq("id", excludeId)
-      .limit(3);
-
-    if (error) console.error("❌ Error fetching related news:", error);
-    setRelatedArticles((data || []) as any);
-
-  };
-
-const fetchComments = async (articleId: string) => {
+  // Ambil 7 berita terbaru (new news)
+const fetchNewArticles = async () => {
   const { data, error } = await supabase
-    .from("comments")
+    .from("articles")
     .select(`
+      id,
+      title,
+      image_path,
+      created_at,
+      articles_author_id_fkey ( full_name )
+    `)
+    .order("created_at", { ascending: false })
+    .limit(7);
+
+  if (error) {
+    console.error("❌ Error fetching new news:", error);
+  } else {
+    setRelatedArticles((data || []) as unknown as Article[]);
+  }
+};
+
+
+  const fetchComments = async (articleId: string) => {
+    const { data, error } = await supabase
+      .from("comments")
+      .select(
+        `
       id,
       content,
       created_at,
       author_id,
       profiles ( full_name, avatar_url )
-    `)
-    .eq("article_id", articleId)
-    .order("created_at", { ascending: false });
+    `,
+      )
+      .eq("article_id", articleId)
+      .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error("❌ Error fetching comments:", error);
-    return;
-  }
+    if (error) {
+      console.error("❌ Error fetching comments:", error);
+      return;
+    }
 
-  // Transform data Supabase agar sesuai tipe Comment
-  const parsedComments: Comment[] = (data || []).map((c: any) => ({
-    id: c.id,
-    content: c.content,
-    created_at: c.created_at,
-    author_id: c.author_id,
-    profiles: c.profiles || { full_name: "Anonim", avatar_url: "/images/logo/user.png" }, // langsung pakai object
-  }));
+    // Transform data Supabase agar sesuai tipe Comment
+    const parsedComments: Comment[] = (data || []).map((c: any) => ({
+      id: c.id,
+      content: c.content,
+      created_at: c.created_at,
+      author_id: c.author_id,
+      profiles: c.profiles || {
+        full_name: "Anonim",
+        avatar_url: "/images/logo/user.png",
+      }, // langsung pakai object
+    }));
 
-  setComments(parsedComments);
-};
-
-
-
-
+    setComments(parsedComments);
+  };
 
   const handleAddComment = async () => {
     if (!user) {
@@ -180,13 +191,13 @@ const fetchComments = async (articleId: string) => {
     const text = `Baca berita menarik: ${article?.title}`;
     const shareUrls: Record<string, string> = {
       twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-        text
+        text,
       )}&url=${encodeURIComponent(url)}`,
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-        url
+        url,
       )}`,
       whatsapp: `https://api.whatsapp.com/send?text=${encodeURIComponent(
-        text + " " + url
+        text + " " + url,
       )}`,
     };
     window.open(shareUrls[platform], "_blank");
@@ -202,22 +213,38 @@ const fetchComments = async (articleId: string) => {
       </div>
     );
 
+    const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+
   return (
     <div>
       <Navbar active="page" />
       <div className="mx-auto mt-14 min-h-screen p-6 md:px-40">
         {/* ---------- Category ---------- */}
         <div className="my-6">
-          <span className="text-sm font-semibold text-gray-600">Category: </span>
+          <span className="text-sm font-semibold text-gray-600">
+            Category:{" "}
+          </span>
           <span className="rounded-md bg-purple-100 px-3 py-1 text-sm text-purple-800">
             {article.category || "Uncategorized"}
           </span>
         </div>
 
         {/* ---------- Title ---------- */}
-        <div className="items-center mb-4 flex">
-          <span className="mr-2 bg-red-600 pt-3 text-2xl text-red-600">.</span>
-          <h1 className="text-5xl font-extrabold text-black-2">{article.title}</h1>
+        <div className="mb-4 flex items-center">
+          {/* <span className="mr-2 bg-red-600 pt-3 text-2xl text-red-600">.</span> */}
+          <h1 className="flex border-l-6 border-red-600 text-5xl font-extrabold text-black-2">
+            {" "}
+            <span className="text-white">.</span>
+            {article.title}
+          </h1>
         </div>
 
         <p className="mb-6 text-sm text-gray-500">
@@ -244,28 +271,32 @@ const fetchComments = async (articleId: string) => {
             <div className="md:flex">
               {/* ---------- Share Buttons ---------- */}
               <div className="flex flex-col items-start gap-4 md:w-1/4">
-                <h3 className="mb-2 text-sm font-semibold text-gray-700">Share:</h3>
-                <button
-                  onClick={() => shareArticle("facebook")}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1877F2] text-white transition hover:bg-[#0d65d9]"
-                  title="Share to Facebook"
-                >
-                  <FaFacebookF size={18} />
-                </button>
-                <button
-                  onClick={() => shareArticle("twitter")}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1DA1F2] text-white transition hover:bg-[#0d8bd6]"
-                  title="Share to Twitter"
-                >
-                  <FaTwitter size={18} />
-                </button>
-                <button
-                  onClick={() => shareArticle("whatsapp")}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-[#25D366] text-white transition hover:bg-[#1eb75b]"
-                  title="Share to WhatsApp"
-                >
-                  <FaWhatsapp size={18} />
-                </button>
+                <h3 className="mb-2 text-sm font-semibold text-gray-700">
+                  Share:
+                </h3>
+                <div className="flex flex-row gap-3">
+                  <button
+                    onClick={() => shareArticle("facebook")}
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1877F2] text-white transition hover:bg-[#0d65d9]"
+                    title="Share to Facebook"
+                  >
+                    <FaFacebookF size={18} />
+                  </button>
+                  <button
+                    onClick={() => shareArticle("twitter")}
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1DA1F2] text-white transition hover:bg-[#0d8bd6]"
+                    title="Share to Twitter"
+                  >
+                    <FaTwitter size={18} />
+                  </button>
+                  <button
+                    onClick={() => shareArticle("whatsapp")}
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-[#25D366] text-white transition hover:bg-[#1eb75b]"
+                    title="Share to WhatsApp"
+                  >
+                    <FaWhatsapp size={18} />
+                  </button>
+                </div>
               </div>
 
               {/* ---------- Article Body ---------- */}
@@ -280,7 +311,9 @@ const fetchComments = async (articleId: string) => {
 
                 {/* ---------- Tags ---------- */}
                 <div className="mt-6">
-                  <h3 className="mb-3 text-lg font-semibold text-gray-700">Tags:</h3>
+                  <h3 className="mb-3 text-lg font-semibold text-gray-700">
+                    Tags:
+                  </h3>
                   <div className="flex flex-wrap gap-2">
                     {article.tags?.length > 0 ? (
                       article.tags.map((tag, i) => (
@@ -292,7 +325,9 @@ const fetchComments = async (articleId: string) => {
                         </span>
                       ))
                     ) : (
-                      <span className="text-sm text-gray-500">No tags available</span>
+                      <span className="text-sm text-gray-500">
+                        No tags available
+                      </span>
                     )}
                   </div>
                 </div>
@@ -332,41 +367,45 @@ const fetchComments = async (articleId: string) => {
                     </div>
                   )}
 
-{/* Daftar komentar */}
-{comments.length > 0 ? (
-  <div className="space-y-4">
-    {comments.map((c) => (
-      <div
-        key={c.id}
-        className="flex items-start gap-3 rounded-md border border-gray-200 bg-gray-50 p-4 shadow-sm"
-      >
-        {/* Foto profil */}
-        <img
-          src={c.profiles?.avatar_url || "/images/logo/user.png"} // default avatar jika null
-          alt={c.profiles?.full_name || "Anonim"}
-          className="h-10 w-10 rounded-full object-cover"
-        />
+                  {/* Daftar komentar */}
+                  {comments.length > 0 ? (
+                    <div className="space-y-4">
+                      {comments.map((c) => (
+                        <div
+                          key={c.id}
+                          className="flex items-start gap-3 rounded-md border border-gray-200 bg-gray-50 p-4 shadow-sm"
+                        >
+                          {/* Foto profil */}
+                          <img
+                            src={
+                              c.profiles?.avatar_url || "/images/logo/user.png"
+                            } // default avatar jika null
+                            alt={c.profiles?.full_name || "Anonim"}
+                            className="h-10 w-10 rounded-full object-cover"
+                          />
 
-        <div className="flex-1">
-          <p className="text-sm text-gray-800">{c.content}</p>
-          <p className="mt-2 text-xs text-gray-500">
-            Oleh {c.profiles?.full_name || "Anonim"} •{" "}
-            {new Date(c.created_at).toLocaleDateString("id-ID", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </p>
-        </div>
-      </div>
-    ))}
-  </div>
-) : (
-  <p className="text-sm text-gray-500">Belum ada komentar.</p>
-)}
-
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-800">{c.content}</p>
+                            <p className="mt-2 text-xs text-gray-500">
+                              Oleh {c.profiles?.full_name || "Anonim"} •{" "}
+                              {new Date(c.created_at).toLocaleDateString(
+                                "id-ID",
+                                {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                },
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">Belum ada komentar.</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -375,37 +414,41 @@ const fetchComments = async (articleId: string) => {
           {/* ---------- Sidebar ---------- */}
           <div className="mt-8 md:mt-0 md:w-1/4 md:pl-6">
             <div className="mb-6 rounded-lg bg-gray-100 p-4 text-center shadow">
-<AdSlot slot="news_sidebar" />
+              <AdSlot slot="news_sidebar" />
             </div>
 
             <div>
-              <h2 className="mb-3 text-lg font-bold text-gray-800">
-                Related News
-              </h2>
-              {relatedArticles.length > 0 ? (
-                relatedArticles.map((rel) => (
-                  <div
-                    key={rel.id}
-                    onClick={() => router.push(`/news/${rel.id}`)}
-                    className="mb-3 cursor-pointer rounded-lg border p-3 transition hover:bg-gray-50"
-                  >
-                    {rel.image_path && (
-                      <img
-                        src={rel.image_path}
-                        alt={rel.title}
-                        className="mb-2 h-28 w-full rounded-md object-cover"
-                      />
-                    )}
-                    <p className="line-clamp-2 text-sm font-semibold text-gray-700">
-                      {rel.title}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500">
-                  No related articles found.
-                </p>
-              )}
+              <h2 className="mb-3 text-lg font-bold text-gray-800">New News</h2>
+
+{relatedArticles.length > 0 ? (
+  relatedArticles.map((rel) => (
+    <div
+      key={rel.id}
+      onClick={() => router.push(`/news/${rel.id}`)}
+      className="mb-3 cursor-pointer rounded-lg border p-3 transition hover:bg-gray-50"
+    >
+      {rel.image_path && (
+        <img
+          src={rel.image_path}
+          alt={rel.title}
+          className="mb-2 h-28 w-full rounded-md object-cover"
+        />
+      )}
+
+      <p className="line-clamp-2 text-sm font-semibold text-gray-800">
+        {rel.title}
+      </p>
+
+      <div className=" flex items-center justify-end mt-2 text-xs text-gray-500">
+        {/* <span>{rel.articles_author_id_fkey?.[0]?.full_name || "Anonim"}</span> */}
+        <span>{formatDate(rel.created_at)}</span>
+      </div>
+    </div>
+  ))
+) : (
+  <p className="text-sm text-gray-500">No news found.</p>
+)}
+
             </div>
           </div>
         </div>
