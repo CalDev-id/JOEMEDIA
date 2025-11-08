@@ -404,6 +404,7 @@ export default function AdminArticles() {
               <option value="Hiburan-Lifestyle">Hiburan & Lifestyle</option>
               <option value="Olahraga">Olahraga</option>
               <option value="Teknologi-Otomotif">Teknologi & Otomotif</option>
+              <option value="Opini">Opini</option>
             </select>
           </div>
 

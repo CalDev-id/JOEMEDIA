@@ -177,6 +177,7 @@ const Navbar: FC<NavbarProps> = ({ active }) => {
 <li><Link href="/category/Hiburan-Lifestyle">Hiburan & Lifestyle</Link></li>
 <li><Link href="/category/Olahraga">Olahraga</Link></li>
 <li><Link href="/category/Teknologi-Otomotif">Teknologi & Otomotif</Link></li>
+<li><Link href="/category/Opini">Opini</Link></li>
 
               <li>
                 <Link href="/aboutUs">About us</Link>
