@@ -14,6 +14,8 @@ interface Article {
   image_path: string | null;
   published: boolean;
   created_at: string;
+  created_by: string | null;
+  category: string;
   articles_author_id_fkey: {
     full_name: string | null;
   } | null;
@@ -74,6 +76,8 @@ export default function HomePage() {
         image_path,
         published,
         created_at,
+        created_by,
+        category,
         articles_author_id_fkey ( full_name )
       `;
 
@@ -217,7 +221,7 @@ export default function HomePage() {
                       <div>
                         By{" "}
                         <span className="font-medium text-gray-700">
-                          {a.articles_author_id_fkey?.full_name ?? "Unknown"}
+                          {a.created_by?? "Unknown"}
                         </span>
                       </div>
 
