@@ -107,26 +107,27 @@ export default function NewsDetailPage() {
   };
 
   // Ambil 7 berita terbaru (new news)
-const fetchNewArticles = async () => {
-  const { data, error } = await supabase
-    .from("articles")
-    .select(`
+  const fetchNewArticles = async () => {
+    const { data, error } = await supabase
+      .from("articles")
+      .select(
+        `
       id,
       title,
       image_path,
       created_at,
       articles_author_id_fkey ( full_name )
-    `)
-    .order("created_at", { ascending: false })
-    .limit(7);
+    `,
+      )
+      .order("created_at", { ascending: false })
+      .limit(7);
 
-  if (error) {
-    console.error("❌ Error fetching new news:", error);
-  } else {
-    setRelatedArticles((data || []) as unknown as Article[]);
-  }
-};
-
+    if (error) {
+      console.error("❌ Error fetching new news:", error);
+    } else {
+      setRelatedArticles((data || []) as unknown as Article[]);
+    }
+  };
 
   const fetchComments = async (articleId: string) => {
     const { data, error } = await supabase
@@ -213,15 +214,14 @@ const fetchNewArticles = async () => {
       </div>
     );
 
-    const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-};
-
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  };
 
   return (
     <div>
@@ -301,13 +301,15 @@ const fetchNewArticles = async () => {
 
               {/* ---------- Article Body ---------- */}
               <div className="md:w-3/4">
-                <div className="prose max-w-none leading-relaxed text-gray-800">
-                  {article.body.split("\n").map((paragraph, i) => (
-                    <p key={i} className="mb-4">
-                      <div dangerouslySetInnerHTML={{ __html: paragraph }} />
-                    </p>
-                  ))}
-                </div>
+<div className="article-body prose max-w-none leading-relaxed text-gray-800">
+  {article.body.split("\n").map((paragraph, i) => (
+    <div
+      key={i}
+      className="mb-4"
+      dangerouslySetInnerHTML={{ __html: paragraph }}
+    />
+  ))}
+</div>
 
                 {/* ---------- Tags ---------- */}
                 <div className="mt-6">
@@ -420,35 +422,34 @@ const fetchNewArticles = async () => {
             <div>
               <h2 className="mb-3 text-lg font-bold text-gray-800">New News</h2>
 
-{relatedArticles.length > 0 ? (
-  relatedArticles.map((rel) => (
-    <div
-      key={rel.id}
-      onClick={() => router.push(`/news/${rel.id}`)}
-      className="mb-3 cursor-pointer rounded-lg border p-3 transition hover:bg-gray-50"
-    >
-      {rel.image_path && (
-        <img
-          src={rel.image_path}
-          alt={rel.title}
-          className="mb-2 h-28 w-full rounded-md object-cover"
-        />
-      )}
+              {relatedArticles.length > 0 ? (
+                relatedArticles.map((rel) => (
+                  <div
+                    key={rel.id}
+                    onClick={() => router.push(`/news/${rel.id}`)}
+                    className="mb-3 cursor-pointer rounded-lg border p-3 transition hover:bg-gray-50"
+                  >
+                    {rel.image_path && (
+                      <img
+                        src={rel.image_path}
+                        alt={rel.title}
+                        className="mb-2 h-28 w-full rounded-md object-cover"
+                      />
+                    )}
 
-      <p className="line-clamp-2 text-sm font-semibold text-gray-800">
-        {rel.title}
-      </p>
+                    <p className="line-clamp-2 text-sm font-semibold text-gray-800">
+                      {rel.title}
+                    </p>
 
-      <div className=" flex items-center justify-end mt-2 text-xs text-gray-500">
-        {/* <span>{rel.articles_author_id_fkey?.[0]?.full_name || "Anonim"}</span> */}
-        <span>{formatDate(rel.created_at)}</span>
-      </div>
-    </div>
-  ))
-) : (
-  <p className="text-sm text-gray-500">No news found.</p>
-)}
-
+                    <div className=" mt-2 flex items-center justify-end text-xs text-gray-500">
+                      {/* <span>{rel.articles_author_id_fkey?.[0]?.full_name || "Anonim"}</span> */}
+                      <span>{formatDate(rel.created_at)}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">No news found.</p>
+              )}
             </div>
           </div>
         </div>
